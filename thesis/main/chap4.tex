@@ -1,0 +1,340 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 4: The need for better security
+%% ============================================================================
+
+\chapter{The Need For Better Security}
+\label{chap:needBetSec}
+
+In this chapter I will outline some security concerns regarding the original McEliece public key cryptosystem that was introduced in \cref{sec:descOrigMceliece}.
+
+The main takeaway of \cref{sec:attStrMceCry} is that it is indeed imperative, that the Goppa codes used will be an irreducible binary Goppa code built in exactly the same way as described in \cref{subsec:howToIrrBinGoppa}.
+
+In \cref{sec:cipOnlAttMceCry} I will give a rundown of some attacks on the ciphertext produced by the original McEliece public key cryptosystem. Some of those attacks are to be considered critical and thus it will automatically be revealed that this ultimately leads to a need for a better and more rigorous security. This security notion that is needed will also be briefly introduced in this section.
+
+
+
+\section{Attacking The Structure Of The McEliece Cryptosystem}
+\label{sec:attStrMceCry}
+
+I mentioned in \cref{sec:descOrigMceliece} how in \cite{EOS} it is pointed out that any Goppa code can be used for the original McEliece public key cryptosystem. It is indeed true that any one of these work, but I also noted, that the security might be compromised when one is not using an irreducible binary Goppa code. In this section I will reveal just how one might accidentally compromise the security of the cryptosystem.
+
+Let me just start this section off with something completely different in \cref{subsec:impSP}. This will serve as preliminaries in order to understand the further goal of this section in \cref{subsec:weakKeys}. Since the attack in \cref{subsec:weakKeys} can be overcome, I will not go into full detail about it. I will instead keep to describing it in essence.
+
+
+
+\subsection{The Importance Of $\mathbf{L}$, $\mathbf{P}$ and $\mathbf{S}$}
+\label{subsec:impSP}
+
+Here I will follow \cite{EOS} in trying to explain the significance of $\mathbf{L}$, $\mathrm{P}$ and $\mathrm{S}$. In doing so it will automatically also be explained why the private key is what it is (that is, why $D_{\mathcal{G}}$ and $\mathrm{P}$ must be kept secret). As a shorthand, I will write ``PKC'' instead of ``public key cryptosystem''.
+
+For the McEliece PKC one needs to use an irreducible binary Goppa code $\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right)$ with code support $\mathbf{L}$ and Goppa polynomial $g$. Suppose a public key of the McEliece PKC is built alongside a corresponding private key. Since $\mathrm{P}$ is a random permutation, then even if the public key is known to an adversary, then $\mathbf{L}$ can still be revealed without introducing any security problems, provided that $\mathrm{P}$ is indeed kept secret (it is actually often the case that $\mathbf{L}$ is revealed for normal applications). The reason for this is that the knowledge of $\mathrm{P}$ will be needed for decryption and for any $\gamma \in \mathbf{L}$ it follows by definition that $g\left(\gamma\right) \neq 0$, so $g$ can not be reconstructed using only the knowledge of $\mathbf{L}$ alone. Taken together this means that one would still have to brute force the generator matrix $G$ of $\mathcal{G}$, even if $\mathbf{L}$ is known. This also serves as an argument as to why $g$ must be kept secret and why it is the trapdoor in the McEliece PKC.
+
+If $\mathrm{P}$ is revealed, then so is $G' \mathrm{P}^{-1} = \mathrm{S} G$. Now suppose $g$ is unknown and let $H'$ be the systematic dual matrix of $\mathrm{S}G$. Then from \cref{def:IrrBinGoppaCode} it follows that $S_{\vec{c}}\left(X\right) = 0$ for all binary vectors $\vec{c}$ where $H' \mathrm{P}^{-1} \vec{c}^T = 0$ (remember that the underlying Goppa code is defined as the set of the $\vec{c}$'s that fulfill this property). If the underlying Goppa code is revealed, then an adversary would be able to do efficient error correction and so the underlying Goppa code can not be allowed to be compromised. So revealing $\mathrm{P}$ would break the McEliece PKC and thus $\mathrm{P}$ must be kept secret.
+
+Unlike $\mathrm{P}$, $\mathrm{S}$ does not aid in hiding the secret Goppa polynomial $g$ being used. As Canteaut and Chabaud put it, ``the invertible matrix $\mathrm{S}$ has no cryptographic function; it only assures for McEliece's system that the public matrix is not systematic otherwise most of the bits of the plain-text would be revealed'' \cite[p. 4]{CC}. As of yet there is no known way efficiently to recover $H$ from knowing $\mathrm{S}^{-1} G'$ only. An important note here is that this statement is only made about the original McEliece PKC.
+
+
+
+\subsection{Weak Keys}
+\label{subsec:weakKeys}
+
+In 1998, Loidreau and Sendrier proposed a way to identify weak keys \cite{LS}. Specifically they found a structural attack on the original McEliece PKC that works, if the used Goppa polynomial is a ``binary'' polynomial. What is meant by this is that the Goppa polynomial, $g$, is over the field $\F_2$ -- i.e. $g \in \F_2\left[X\right]$.
+
+In \cite{sendrier} an algorithm known as the \emph{Support Splitting Algorithm (SSA)} is presented. It can be used to determine whether or not two codes are permutation equivalent and the automorphism group of a code.
+
+Now the idea behind the attack is as follows. Use the SSA as an oracle to determine whether or not the Goppa polynomial used is of the aforementioned form. This greatly reduces the search space of a brute force attack on the private key and so, if the used Goppa polynomial is found to be over the field $\F_2$, then one can simply brute force search for a Goppa polynomial that generates the used Goppa code. Once the underlying Goppa code is known, then $\mathrm{P}$ can be revealed and the cryptosystem is then broken.
+
+The easy way to deal with this attack is to just simply not use such weak Goppa codes. The attack technically can be generalised to work if the used Goppa polynomial is over any subfield of $\F_{2^m}$, but in the general case an exhaustive search simply takes too long and if $g$ is not of the weak form previously described, then the amount of polynomials in the equivalence classes found are simply too low to reduce the search space enough to make the attack viable in practice \cite{EOS,KI}.
+
+
+
+\section{Ciphertext Only Attacks On The McEliece Cryptosystem}
+\label{sec:cipOnlAttMceCry}
+
+In the beginning of the chapter I promised, that I would introduce a security notion in this section. Before beginning to talk about non-critical- and critical ciphertext only attacks, I will have to introduce this security notion. This will provide a basis for why the attacks described in this section can be divided into critical- and non-critical attacks.
+
+Suppose an adversary who wants to recover a message from its ciphertext only, has access to a decryption oracle. The adversary may not query the oracle on the target ciphertext, but is given the plaintext that is the result of decrypting any chosen ciphertext. The adversary then hopes that this can result in a plaintext that can be used to recover the target plaintext. This is called an \emph{adaptive chosen ciphertext attack} (\emph{CCA2}).
+The security definition that is aspired to can then be introduced.
+\begin{defi}[CCA2 Security]
+\label{def:ccaSecInf}
+	A cryptosystem is said to be \emph{secure against adaptive chosen ciphertext attacks} (\emph{CCA2 secure}) if all probabilistic polynomial time adversaries has only negligible probability of deciphering a given ciphertext, through the use of an adaptive chosen ciphertext attack.
+\end{defi}
+
+Usually this would be stated in another (yet more formal) way however. In order to understand this other way of stating the definition, some more introduction to this field of study will be needed. So let $\Pi = \left(G,E,D\right)$ be a public key cryptosystem with generating algorithm $G$, that generates the public key, $pk$, and secret key, $sk$, encryption algorithm $E$ and decryption algorithm $D$. For this to be useful when transferring messages, it is required that such a cryptosystem would fulfill that for any encryption of a plaintext, correct decryption is possible. This means that if $x$ is a plaintext and $\left(pk, sk\right)$ is a key pair output by $G$, then $D_{sk}\left(E_{pk}\left(x\right)\right) = x$ (where $E_{pk}$ denotes encryption using the public key and $D_{sk}$ denotes decryption using the secret key).
+
+Now call the adversary $A$ and suppose $A$ is in a case where it communicates with one of two different types of oracles, $O_0$ and $O_1$. Let $P\left(A,0\right)$ be the probability that $A$ guesses being in the case, where $A$ is talking to oracle $O_0$ and let $P\left(A,1\right)$ be the probability that $A$ guesses being in the case, where $A$ is talking to oracle $O_1$. Let $\abs{\bullet}$ denote the absolute value of a number (please note that this notation is overloaded and looks exactly the same as the notation of the function that returns the number of elements in a set). The advantage of $A$ can then be introduced.
+\begin{defi}[Advantage Of An Adversary]
+\label{def:advantage}
+	Let $A$ be an adversary that communicates with an oracle and let $O_0$ and $O_1$ be oracles. The \emph{advantage of A, $Adv_A$,} is then defined as
+	\[
+		Adv_A\left(O_0, O_1\right) = \abs{P\left(A, 0\right) - P\left(A,1\right)}.
+	\]
+\end{defi}
+
+Let $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$ and $O_{\mathrm{real}}^{\mathrm{CCA}2}$ be oracles and let $k$ be the security parameter of $\Pi$. Consider then the following two scenarios:
+\begin{description}
+	\item[The Ideal World] Both the adversary $A$ and oracle $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$ gets the security parameter $k$ as input.
+		\begin{enumerate}
+			\item $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$ runs $G\left(k\right)$ to get $\left(pk, sk\right)$ and gives $pk$ to $A$.
+			\item $A$ may submit a string $\vec{y}$ to $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$, which will return $D_{sk}\left(\vec{y}\right)$ to $A$. This step can be repeated as many times as $A$ wants.
+			\item $A$ then chooses a plaintext $\vec{x}$ and gives to an encryption oracle $O_E$. The oracle responds with $\vec{y}_0 = E_{pk}\left(\vec{r}\right)$, where $\vec{r}$ is a randomly chosen plaintext of the same length as $\vec{x}$.
+			\item $A$ may now again submit a chosen string $\vec{y}$ to $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$, but is not allowed to submit the string $\vec{y} = \vec{y}_0$. If $A$ follows the rules, then $O_{\mathrm{ideal}}^{\mathrm{CCA}2}$ will return $D_{sk}\left(\vec{y}\right)$ to $A$. Again this step can be repeated as long as $A$ wants to.
+			\item $A$ now outputs a bit $b$, signifying $A$'s guess as to whether or not $A$ is in this scenario.
+		\end{enumerate}
+	\item[The Real World] Both the adversary $A$ and oracle $O_{\mathrm{real}}^{\mathrm{CCA}2}$ gets the security parameter $k$ as input.
+	\begin{enumerate}
+		\item $O_{\mathrm{real}}^{\mathrm{CCA}2}$ runs $G\left(k\right)$ to get $\left(pk, sk\right)$ and gives $pk$ to $A$.
+		\item $A$ may submit a string $\vec{y}$ to $O_{\mathrm{real}}^{\mathrm{CCA}2}$, which will return $D_{sk}\left(\vec{y}\right)$ to $A$. This step can be repeated as many times as $A$ wants.
+		\item $A$ then chooses a plaintext $\vec{x}$ and gives it to $O_{\mathrm{real}}^{\mathrm{CCA}2}$. $O_{\mathrm{real}}^{\mathrm{CCA}2}$ responds with $\vec{y}_0 = E_{pk}\left(\vec{x}\right)$.
+		\item $A$ may now again submit a chosen string $\vec{y}$ to $O_{\mathrm{real}}^{\mathrm{CCA}2}$, but is not allowed to submit the string $\vec{y} = \vec{y}_0$. If $A$ follows the rules, then $O_{\mathrm{real}}^{\mathrm{CCA}2}$ will return $D_{sk}\left(\vec{y}\right)$ to $A$. Again this step can be repeated as long as $A$ wants to.
+		\item $A$ now outputs a bit $b$, signifying $A$'s guess as to whether or not $A$ is in this scenario.
+	\end{enumerate}
+\end{description}
+Any time that a random oracle is used, then it is said that the work is done in the \emph{random oracle model} (\emph{ROM}). The formal version of \cref{def:ccaSecInf} is then ready to be introduced.
+\begin{defi}[CCA2 Indistinguishable]
+\label{def:cca2SecFor}
+	A public key cryptosystem $\Pi$ with security parameter $k$ is said to be \emph{indistinguishable against adaptive chosen ciphertext attacks} (\emph{CCA2 indistinguishable}) if for all probabilistic polynomial time adversaries $A$, it holds that $Adv_A\left(O_{\mathrm{real}}^{\mathrm{CCA2}}, O_{\mathrm{ideal}}^{\mathrm{CCA2}}\right)$ is negligible in $k$.
+\end{defi}
+If a public key cryptosystem is CCA2 indistinguishable, then it must also be CCA2 secure and vice versa. For this reason, the terms ``CCA2 indistinguishable'' and ``CCA2 secure'' will be used interchangeably. Additionally, the shorthand \emph{IND-CCA2} is also often used. This notion of security that arises from being CCA2 indistinguishable was first introduced in \cite{RS} and is now widely regarded as the standard security notion for public key encryption schemes.
+
+
+
+\subsection{Non-Critical Attacks}
+\label{subsec:nonCriAtt}
+
+The attacks presented here are considered not critical, because they can simply be circumvented by enlarging the parameter size(s) of the cryptosystem \cite{KI}.
+
+
+
+\subsubsection{Generalised Information-Set-Decoding Attack}
+\label{subsubsec:genInfSetDecAtt}
+
+This attack was actually first proposed by McEliece himself in the original paper \cite{mceliece}. It was later made more systematic and generalised in \cite{LB} by Lee and Brickell. By assuming knowledge of an upper bound on the distance to the next codeword, it tries to solve the used special case of \cref{prob:genDecProb}.
+
+The general idea of the attack is that one assumes that an adversary is given a generator matrix $G'$ of a linear error-correcting code along with a ciphertext $\vec{c} = \vec{m} G' \oplus \vec{z}$, where $\vec{z}$ is an error vector of weight $t$. Now the adversary will randomly choose $k$ columns of $G'$ and $\vec{c}$. If there are no errors in the chosen columns of $\vec{c}$ and if the matrix generated from the $k$ columns chosen from $G'$ put together provide an invertible matrix, then $\vec{m}$ can easily be determined.
+
+Let $G'_k$, $\vec{c}_k$ and $\vec{z}_k$ denote the $k$ columns picked from $G'$, $\vec{c}$ and $\vec{z}$ respectively with $\vec{m}$ being the message that one wants to transmit. They have the following relationship
+\[
+	\vec{c}_k = \vec{m} G'_k \vec{z}_k.
+\]
+Now if $\vec{z}_k = \vec{0}$ and if $G'_k$ is non-singular, then $\vec{m}$ can be recovered using \cref{eq:mcEEncryption}, because it implies that
+\[
+	\vec{m} = \vec{c}_{k} {G'_{k}}^{-1}.
+\]
+Even if $\vec{z}_k \neq \vec{0}$ then one can always make a new guess among small Hamming weights, so assume that $w\left(\vec{z}_k\right)$ is small, then $\vec{m}$ can be recovered by guessing a new $\vec{z}_{k'}$. The recovered plaintext can then be verified by checking whether or not $w\left( \vec{c} \oplus \vec{m} G'\right) = w\left( \left( \vec{c}_{k'} \oplus \vec{z}_{k'}\right) {G'_{k'}}^{-1} G' \oplus \vec{c} \right) = t$ \cite{EOS,KI}.
+
+Now let $I \subset \left\{ 0, \cdots, n-1 \right\}$ be a set fulfilling that $\size{I} = k$. The generalised version of this attack in then summarised in \cref{alg:GISD}, found in \cite{EOS}.
+
+\begin{algorithm}[ht!]
+	\centering
+	\begin{algorithmic}
+		\State \textbf{Input:} $n \times k$ generator matrix $G'$, a cipher text $\vec{c} = \vec{m} G' \oplus \vec{z}$, where $\vec{m}$ is the plain-text and $\vec{z}$ is the error vector of weight $t$, a positive integer $j \leq t$.
+		\State \textbf{Output:} The plaintext $\vec{m}$.
+		\Statex
+		\While{true}
+			\State Choose randomly $I \subset \left\{ 0, \cdots, n-1 \right\}$, where $\size{I} = k$.
+			\State $Q_1 = {G'_I}^{-1}$; $Q_2 = Q_1 G'$
+			\State $\vec{e} = \vec{c} \oplus \vec{c}_I Q_2$
+			\For{$i = 0$ to $j$}
+				\ForAll{$\vec{z}_I$ with $w\left(\vec{z}_I\right) = i$}
+					\If{$w\left(\vec{e} \oplus \vec{z} Q_2\right) = t$}
+						\State \textbf{Return} $\left(\vec{c_I} \oplus \vec{z}_I\right) Q_1$
+					\EndIf
+				\EndFor
+			\EndFor
+		\EndWhile
+	\end{algorithmic}
+	\caption{GISD}
+	\label{alg:GISD}
+\end{algorithm}
+
+\paragraph{Time Complexity Of \cref{alg:GISD}}
+
+Here I will somewhat follow \cite{EOS,LB} and try to give an estimate of the amount of work required to do the attack described in \cref{alg:GISD}.
+
+First of all notice that the number of sets $I$ with $\size{I} = k$ is $\binom{n}{k}$. Now the amount of these sets such that there are $i$ errors in $\vec{c}_I$ is $\binom{t}{i}\binom{n-t}{k-i}$. This means that if there can be at most $j$ errors in $\vec{c}_I$, then there is a total of $\sum_{i=0}^j \binom{t}{i}\binom{n-t}{k-i}$ of such sets $I$, that are relevant. So in order for the \texttt{while}-loop to select the right set $I$ it will have to run an expected
+\[
+	T_j = \frac{\binom{n}{k}}{\sum_{i=0}^j \binom{t}{i} \binom{n-t}{k-i}}
+\]
+number of times.
+
+The \texttt{while}-loop has a body too however. The two \texttt{for}-loops will here be taken together. Notice that the amount of error vectors $\vec{z}_I$ with $w\left(z_I\right) \leq j$ is given by
+\[
+	N_j = \sum\limits_{i=0}^j \binom{k}{i}.
+\]
+
+In \cite{LB} the authors propose using $j=2$ to minimize the expected work factor, but since the expected work factor is clearly proportional to $T_j \cdot N_j$, large enough parameters should still be enough to prevent this type of attack.
+
+
+
+\subsubsection{Finding-Low-Weight-Codeword Attack}
+\label{subsubsec:findLowWeiCodAtt}
+
+Suppose you have an encrypted message $\vec{c} = \vec{m}G' \oplus \vec{z}$. Now you could generate the $\left(k+1\right) \times n$ matrix
+\[
+	\begin{pmatrix}
+		G'\\
+		c
+	\end{pmatrix}
+\]
+and the minimum weight codeword of this would then be the error vector $\vec{z}$. The idea behind this attack is then to find this codeword (solving a special case of \cref{prob:subW}), provided that $w\left(\vec{z}\right) \leq \frac{t}{2}$ and that the minimum distance of $G'$ is $t$. This would completely break the McEliece PKC, since the knowledge of $\vec{z}$, $\vec{c}$ and $G'$ is enough to find the plaintext $\vec{m}$ from \cref{eq:mcEEncryption} as
+\[
+	\vec{m} = \left(\vec{c} \oplus \vec{z}\right) {G'}^{-1}.
+\]
+
+Now Leon, Canteaut and Chabaud and also Stern tried to make algorithms that does this attack by finding a low-weight codeword among codeswords generated by an arbitrary generator matrix using a database obtained by pre-computation\\
+\cite{leon,CC2,stern}.
+
+Assume that a code $C$ is given by some generator matrix $G$. The algorithms then start off by searching for codewords of small weight in a restricted part of the code generated by $G_S$, where $S$ is some random subset of $\left\{ 0, 1, \cdots, n-1 \right\}$. These codewords are then expanded to codewords in $C$ and then comes a check to see whether or not the codewords in $C$ has the desired weight. The algorithms differ in the way that they choose the set $S$ and the way in which they search for codewords generated by $G_S$.
+
+In \cite{CS} the computational cost of Stern's algorithm is evaluated and it is found that the attack based on this algorithm is infeasible for appropriate parameters. Canteaut and Chabaud's algorithm does not improve much upon this result and hence their algorithm is still not good enough to break the original McEliece cryptosystem in practice \cite{EOS}. As for Leon's algorithm, it is shown in \cite{chabaud} that large enough parameters make the attack require way too much computing time in practice.
+
+
+
+\subsubsection{Statistical Decoding}
+\label{subsubsec:statDec}
+
+This type of attack was first proposed in 2001 by Al Jabri in \cite{aljabri} and was later improved upon by Overbeck in \cite{overbeck}.
+
+The idea that led to this attack was that the vectors from the dual space of a linear block code that are not orthogonal to the ciphertext reveals some information on the positions of the errors used in encryption in the McEliece PKC -- again if the errors used in encryption is found, the McEliece PKC is broken. So an algorithm is proposed, that can find a sufficient number of vectors in the dual code of a certain weight. The algorithm tries to find the most likely places in which errors was introduced during encryption.
+
+However the amount of precomputation the algorithm will have to do seems to make sure, that the original McEliece cryptosystem is safe against this attack for parameter size(s) that also resist the attack described in \cref{subsubsec:findLowWeiCodAtt}. The precise running time of this attack is not clear however, since the true minimum distance of the dual code is something that is not known much about \cite{LDVL}.
+
+
+
+\paragraph{Iterative Decoding}
+\label{par:iteDec}
+
+An alternative to the statistical decoding attack, namely an \emph{iterative decoding attack}, was proposed by Fossorier et al. in \cite{FKI}. They point out that this needs less precomputation, but the amount of precomputation needed is still large enough to make it infeasible.
+
+
+
+\subsection{Critical Attacks}
+\label{subsec:critAtt}
+
+The attacks presented in this section can not be overcome by simply enlarging the parameter size(s) of the cryptosystem and is thus considered critical.
+
+All of them aim to reveal some information on the plaintext or the error vector, $\vec{z}$, used for encryption. Most of them do not reveal all of the plaintext, but all of them do not manage to retrieve the private key. They do however provide a reduction in the computational complexity of further subsequent attacks.
+
+One thing they all have in common though, is that if CCA2 security for the McEliece cryptosystem can be obtained, then they can all be avoided. This provides enough reason for developing a conversion or transformation of the cryptosystem that manages to achieve this level of security \cite{EOS,KI}.
+
+
+
+\subsubsection{Known-Partial-Plaintext Attack}
+\label{subsubsec:knoParPlaAtt}
+
+An adversary attacking the original McEliece PKC might use partial knowledge on the target plaintext to obtain the full plaintext, because such partial knowledge reduces the computational cost of the attack, which in turn is the same as reducing the parameters of the cryptosystem \cite{CS}.
+
+Let $\concat{\bullet}{\bullet}$ denote the concatenation of two strings. Now the length of a message, $\vec{m}$, sent using the McEliece PKC will have length $k$ and $k$ can be split up into the sum of two numbers; $k = k_l + k_r$. So let $\vec{m}_l$ and $\vec{m}_r$ denote the leftmost $k_l$ bits and the remaining $k_r$ bits of the message respectively. Suppose an adversary knows $\vec{m}_r$ and wants to recover the remaining bits of the message contained in $\vec{m}_l$. Now let $G'_l$ and $G'_r$ denote the upper $k_l$ rows and the remaining $k_r$ lower rows of $G'$ respectively. It can now be seen that
+\begin{align*}
+	\vec{c} &= \vec{m} G' \xor \vec{z}\\
+		&= \vec{m}_l G'_l \xor \vec{m}_r G'_r \xor \vec{z},\\
+	\Rightarrow \vec{c} \xor \vec{m}_r G'_r &= \vec{m}_l G'_l \xor \vec{z}
+	\intertext{and if $\vec{c}' = \vec{c} \xor \vec{m}_r G'_r$ then}
+	\vec{c}' &= \vec{m}_l G'_l \xor \vec{z}.
+\end{align*}
+So the McEliece PKC with parameters $\left(n,k\right)$ is then equivalent to another instance of the same with parameters $\left(n,k_l\right)$. This attack is not full in and of itself, so a further attack can then be used subsequently. If enough of the plaintext is known beforehand, then the reduction might just be enough to make even one of the non-critical attacks feasible in practice (e.g. the attacks in \cref{subsubsec:genInfSetDecAtt,subsubsec:findLowWeiCodAtt}).
+
+
+
+\subsubsection{Related-Message Attack}
+\label{subsubsec:relMesAtt}
+
+Suppose some adversary wish to attack the McEliece cryptosystem and has access to two different ciphertexts, $\vec{c}_1$, $\vec{c}_2$, coming from two messages, $\vec{m}_1$, $\vec{m}_2$, encrypted using two different error vectors, $\vec{z}_1$, $\vec{z}_2$. If the adversary knows some some linear relation, $\delta\left(\vec{m}_1, \vec{m}_2\right) = \vec{m}_1 \xor \vec{m}_2$, between the two plaintexts, then the adversary should be able to determine the error bits used in encryption \cite{berson}. This is because
+\begin{equation}
+\label{eq:relMessages}
+	\vec{c}_1 \xor \vec{c}_2 \xor \delta\left(\vec{m}_1, \vec{m}_2\right) G' = \vec{z}_1 \xor \vec{z}_2,
+\end{equation}
+so the adversary can now choose $k$ coordinates in $\vec{c}_1 \xor \vec{c}_2 \xor \delta\left(\vec{m}_1, \vec{m}_2\right) G'$ that have the value $0$ and use the attack described in \cref{subsubsec:genInfSetDecAtt} to attack either $\vec{c}_1$ or $\vec{c}_2$.
+
+Let $P\left(\bullet\right)$ denote a probability distribution and let the $j$'th entry in $\vec{z}_i$ be denoted $\vec{z}_{i,j}$. Now supposing that $w\left(\vec{z}_1\right) = w\left(\vec{z}_2\right) = t$ is far smaller than $\frac{n}{2}$, then since
+\[
+	P\left(1 = \vec{z}_{1,j} = \vec{z}_{2,j}\right) = \left( \frac{t}{n} \right)^2
+\]
+it follows that there is a high probability that a $0$-coordinate in the left-hand side of \cref{eq:relMessages} is also a $0$-coordinate in both $\vec{z}_1$ and $\vec{z}_2$. This enables the adversary to efficiently guess error bits and so the attack from \cref{subsubsec:genInfSetDecAtt} can be used.
+
+
+
+\paragraph{Message Resend Attack}
+\label{par:mesResAtt}
+
+A special case of the attack just described is one where the same message is encrypted twice (or more) using different error vectors. In this case $\vec{z}_1 \xor \vec{z}_2$ can be recovered as
+\[
+	\vec{z}_1 \xor \vec{z}_2 = \vec{c}_1 \xor \vec{c}_2.
+\]
+
+
+
+\subsubsection{Reaction Attack}
+\label{subsubsec:reaAtt}
+
+This attack is a weaker version of an adaptively chosen ciphertext attack, because it uses a weaker assumption than the one for the CCA2 security. This is so because the attack only depends on the adversary observing the reaction of the receiver, who has the private key, but no decryption oracle is provided to the adversary. This attack also tries to determine error bits in a sent ciphertext. The attack was presented by Hall et al. in \cite{HGS}.
+
+The idea behind this attack is as follows. Suppose some adversary intercepts a sent ciphertext $\vec{c}$ and flips a few bits (maybe even just one) to create $\vec{c}'$. Then $\vec{c}'$ is sent along to the intended recipient and the adversary then starts observing the reaction coming from this very same recipient. There are two possible reactions to this:
+\begin{description}
+	\item[Reaction A:] The recipient returns a \texttt{repeat}-request to the adversary, because the bit flips amounts to adding further errors in the message, so the recipient cannot decode properly.
+	\item[Reaction B:] The recipient returns an \texttt{acknowledgment} or do nothing, since a proper plaintext was decrypted.
+\end{description}
+Obviously if the total amount of errors has not exceeded $t$ after the bit flipping, then reaction B would be observed. If however reaction A is observed, then the flipped bits would not have been in error in the first place. This means that if reaction A is observed, then the adversary can repeat the process over and over until finally having found the error vector $\vec{z}$ used for encryption.
+
+Now the probability of needing more than $k$ rounds before finding an error position will be
+\[
+	\frac{\binom{n-k}{t}}{\binom{n}{t}}
+\]
+so the attack from \cref{subsubsec:genInfSetDecAtt} can now be used to break the cryptosystem.
+
+
+
+\subsubsection{Malleability Attack}
+\label{subsubsec:malAtt}
+
+The concept of \emph{non-malleable cryptography} was first introduced in 1991 by Dolev et al. in \cite{DDN}. In order to understand this attack, one first needs to understand what is meant by malleable cryptography.
+\begin{defi}[Malleable- And Non-Malleable Cryptography]
+\label{def:malNonmalCry}
+	Let $\vec{c}$ be a ciphertext coming from the encryption of message $\vec{m}$. If $\vec{c}$ can be changed into another valid ciphertext, $\vec{c}'$, that is an encryption of $\vec{m}'$, which has a known relation to $\vec{m}$, then the used cryptosystem is said to be \emph{malleable}. If this is not possible, then the used cryptosystem is said to be \emph{non-malleable}.
+\end{defi}
+
+An adversary might take advantage of a cryptosystem being malleable and use it to try to break said cryptosystem. Here comes an interesting result to note.
+\begin{thm}
+\label{thm:equiOfNMandCCA2}
+	If a cryptosystem is non-malleable, then it is also CCA2 secure. Likewise if a cryptosystem is CCA2 secure, then it is also non-malleable.
+	\begin{Proof}
+		See \cite{BDPR}.
+	\end{Proof}
+\end{thm}
+
+
+Now in 2000, Hung-Min Sun deviced the following attack on the McEliece PKC in \cite{sun}.
+
+Note that if one adds codewords to a ciphertext coming from the McEliece PKC, then that would yield another valid ciphertext (in the original attack proposed, all codewords are actually added). The attack is then as follows.
+
+Let $G'\left[i\right]$ denote the $i$'th row in the public matrix $G'$, $\vec{m}_1$ be an arbitrary vector with entries in $\left\{ 0,1 \right\}$ such that $w\left(\vec{m}_1\right) \neq 0$ (implying $w\left(\vec{m}_1\right) \geq 1$) and $I = \left\{ i_1, i_2, \cdots \right\}$  be a set of coordinates $i_j$ that correspond to the value $1$ in $\vec{m}_1$. For a plaintext $\vec{m}$ that is encrypted using the McEliece PKC, denote by $\vec{m}'$ the plaintext $\vec{m}' = \vec{m} \xor \vec{m}_1$. Finally the error vector from the McEliece PKC will be denoted as $\vec{z}$ as usual. The changed ciphertext is then calculated as
+\[
+	\vec{c}' = \vec{c} \Xor\limits_{i \in I} G'\left[i\right] = \left(\vec{m} \xor \vec{m}_1\right) G' \xor \vec{z} = \vec{m}' G' \xor \vec{z}.
+\]
+
+So the original McEliece PKC is not non-malleable. In the scenario of a chosen ciphertext attack given in the start of this section, the adversary can ask the oracle to decrypt $\vec{c}'$. The oracle will return $\vec{m}' = \vec{m} \xor \vec{m}_1$. Since $\vec{m}_1$ is known, the adversary can then obtain the target plaintext as
+\[
+	\vec{m} = \vec{m}' \xor \vec{m}_1.
+\]
+
+This proves the following.
+\begin{thm}
+\label{thm:McENotNonMal}
+	The McEliece cryptosystem is malleable.
+\end{thm}
+
+Which in turn leads to the following
+\begin{cor}
+\label{cor:McENotCCA2Sec}
+	The original McEliece PKC is not CCA2 secure.
+	\begin{Proof}
+		This follows from \cref{thm:equiOfNMandCCA2,thm:McENotNonMal}.
+	\end{Proof}
+\end{cor}
+

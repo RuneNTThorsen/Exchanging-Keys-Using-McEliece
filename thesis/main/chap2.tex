@@ -1,0 +1,429 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%%
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 2: Goppa Codes
+%% ============================================================================
+
+\chapter{Goppa Codes}
+\label{chap:goppa}
+
+Goppa codes were first introduced by V. D. Goppa in 1970 \cite{goppa}. In this chapter I will start off by defining Goppa codes and then I will show how to build an irreducible binary Goppa code. These are of a particular importance, since they are the type of Goppa codes used in \cref{chap:origmceliece} and they have some nice properties that are good to have when it comes to cryptography. I will show how to build these irreducible binary Goppa codes before moving my focus to the minimum distance of these and then how to decode them.
+
+As will be revealed the lower bound is easy to calculate for irreducible binary Goppa codes, they also allow efficient error correction, provided one knows the generating polynomial and lastly if one does not know the generating polynomial, then there is yet to be discovered an efficient algorithm that can do the error correction \cite{EOS}.
+
+This is also the chapter where the importance of \cref{chap:lecc} is first seen, as Goppa codes are a special case of linear codes \cite{EOS}\cite[p. 140]{vanlint}. For a full introduction to coding theory and Goppa codes I would have to recommend a textbook on the subject though.
+
+
+
+\section{Definitions}
+\label{sec:defGoppa}
+
+In this section I will introduce Goppa codes in a general sense and then continue on with how to build an irreducible binary Goppa code including the parity check matrix and the generator matrix for such a code.
+
+
+
+\subsection{Goppa Codes in General}
+
+Let $g\left(z\right)$ be a monic polynomial of degree $t$ over the field $\F_{q^m}$ (with $m$ and $t$ both being positive integers) and let $L = \left\{ \gamma_0, \gamma_1, \cdots, \gamma_{n-1} \right\} \subset \F_{q^m}$ such that $\size{L} = n$ and $g\left(\gamma_i\right) \neq 0$ for $0 \leq i \leq n-1$. Now call $g$ the \emph{Goppa polynomial} and in order to emphasise the importance of $L$, call the elements of $L$ the \emph{code support}\cite{EOS, vanlint}.
+
+Now the definition of a Goppa code (found in \cite[p. 140]{vanlint}) is ready to be introduced.
+\begin{defi}[Goppa Code]
+\label{def:goppaCode}
+	A \emph{Goppa code} $\Gamma \left(L,g\right)$ with Goppa polynomial $g$ and code support $L$ is the set of codewords $\mathbf{c} = \left(c_0, c_1, \cdots , c_{n-1}\right)$ over the alphabet $\F_q$ for which the following holds:
+\begin{equation}
+\label{eq:defGoppaCode}
+	\sum\limits^{n-1}_{i = 0} \frac{c_1}{z - \gamma_i} \equiv 0 \pmod {g\left(z\right)}.
+\end{equation}
+\end{defi}
+
+Now remember how linear codes had something called a syndrome and how Goppa codes are linear codes. Well Goppa codes must also have a syndrome then. Actually equation \cref{eq:defGoppaCode} hints at the existence and the definition of the syndrome. The following definition of the syndrome is found in \cite{EOS}.
+\begin{defi}[Syndrome of a Goppa code]
+	Let $\vec{c} = \left(\mathbf{c}_0, \cdots , \mathbf{c}_{n-1}\right) \in \F_{q}^n$. Then the \emph{syndrome of a Goppa code}, $S_{\vec{c}}$, is given by
+	\begin{equation*}
+		S_{\vec{c}}\left(z\right) = - \sum\limits_{i=0}^{n-1}\frac{\mathbf{c}_i}{g\left(\gamma_i\right)} \frac{g\left(z\right) - g\left(\gamma_i\right)}{z - \gamma_i} \pmod {g\left(z\right)}.
+	\end{equation*}
+\end{defi}
+
+The important thing here is that this can lead to another way of actually defining Goppa codes as the set of all vectors $\vec{c}$ that fulfills that
+\[
+	S_{\vec{c}}\left(z\right) = 0
+\]
+or equivalently
+\begin{equation}
+\label{eq:altSynForGoppa}
+	S_{\vec{c}}\left(z\right) \equiv \sum\limits_{i=0}^{n-1} \frac{\mathbf{c}_i}{z - \gamma_i} \equiv 0 \pmod {g\left(z\right)}.
+\end{equation}
+
+
+
+\subsection{How To Build An Irreducible Binary Goppa Code}
+\label{subsec:howToIrrBinGoppa}
+
+Now, since I am dealing with binary Goppa codes, a Goppa polynomial over the field $\F_{2^m}$ is needed, so let $\F_{2^m}\left[X\right]$ denote the polynomial ring over this field. In this subsection, I will follow \cite{EOS}, but anywhere that I do not, I will point it out. The purpose of this is to define irreducible binary Goppa codes. The definition should be reminiscent of the previous general definition with some changes and specifications that are of utmost importance for further analysis.
+
+First of all one starts with specifying the Goppa polynomial to be used, so let
+\[
+	g\left(X\right) = \sum\limits_{i=0}^{t} g_i X^i \in \F_{2^m}\left[X\right]
+\]
+be a monic polynomial of degree $t$. This is the Goppa polynomial that will be used to create a \emph{binary Goppa code}. If this polynomial is also irreducible, then one will obtain an \emph{irreducible binary Goppa code}.
+
+Next a code support is needed. Just as before, it is imperative that this consists of elements $\gamma_i$ such that $g\left(\gamma_i\right) \neq 0$ for all $0 \leq i \leq n-1$. So
+\[
+	\mathbf{L} = \left(\gamma_0, \cdots , \gamma_{n-1}\right) \in \F_{2^m}^n.
+\]
+
+Now the preliminaries for the definition of an irreducible binary Goppa code is ready to be introduced.
+\begin{defi}[Irreducible Binary Goppa Code]
+\label{def:IrrBinGoppaCode}
+	Let $g\left(X\right) \in \F_{2^m}\left[X\right]$ be an irreducible binary polynomial and let $\mathbf{L} \in \F_{2^m}^n$ be a code support for the polynomial $g$. An \emph{irreducible binary Goppa code} is then the set of all vectors $\vec{c} = \left(\mathbf{c}_0, \cdots , \mathbf{c}_{n-1}\right) \in \F_{2}^n$ such that
+	\[
+		S_{\vec{c}}\left(X\right) = 0
+	\]
+	holds in the polynomial ring $\F_{2^m}\left[X\right]$ or equivalently fulfills that
+	\begin{equation*}
+		S_{\vec{c}}\left(X\right) \equiv \sum\limits_{i=0}^{n-1} \frac{\mathbf{c}_i}{X - \gamma_i} \equiv 0 \pmod {g\left(X\right)}.
+	\end{equation*}
+\end{defi}
+
+Let $\mathcal{G}$ denote such an irreducible binary Goppa code and thus it is obtained that
+\begin{align*}
+\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right) &= \left\{ \vec{c} \in \F_{2}^n \ \middle\vert \ S_{\vec{c}}\left(X\right) = 0 \right\}\\
+	&= \left\{ \vec{c} \in \F_{2}^n \ \middle\vert \ S_{\vec{c}}\left(X\right) \equiv 0 \pmod {g\left(X\right)} \right\}.
+\end{align*}
+
+An important note when it comes to these types of codes is that if $g\left(X\right)$ is indeed irreducible, then $g\left(\gamma\right) \neq 0$ for all $\gamma \in \F_{2^m}$. This means that $\mathbf{L}$ may contain all elements of $\F_{2^m}$.
+
+Next up in order to have a useful code, one must also have a parity check matrix, $H$, for it. It must be required that any codeword $\vec{c} \in \mathcal{G}\left(\mathbf{L},g\left(X\right)\right)$ fulfills that
+\begin{equation}
+\label{eq:condForH}
+	\vec{c} \in \mathcal{G}\left(\mathbf{L},g\left(X\right)\right) \Leftrightarrow H \vec{c}^T = 0.
+\end{equation}
+So start off by noticing that
+\[	
+	\frac{g\left(X\right) - g\left(\gamma_i\right)}{X - \gamma_i} = \sum\limits_{j=0}^t g_j \frac{X^i - \gamma_i^j}{X - \gamma_i} = \sum\limits_{s=0}^{t-1} X^s \sum\limits_{j = s+1}^{t} g_j \gamma_i^{j - 1 - s}
+\]
+for all $0 \leq i \leq n$. It follows that
+\[	
+	\sum\limits_{i=0}^{n-1} \left( \frac{1}{g\left(\gamma_i\right)} \sum\limits_{j=s+1}^{t} g_j \gamma_i^{j - 1 - s} \right) \vec{c}_i = 0.
+\]
+Van Lint points out that this means that the vector
+\[	
+	\left( \frac{1}{g\left(\gamma_0\right)} \cdot \frac{g\left(X\right) - g\left(\gamma_0\right)}{X - \gamma_0}, \cdots , \frac{1}{g\left(\gamma_{n-1}\right)} \cdot \frac{g\left(X\right) - g\left(\gamma_{n-1}\right)}{X - \gamma_{n-1}} \right)
+\]
+with each entry interpreted as a column vector is a parity check matrix in a way\\
+\cite[p. 140]{vanlint} (his argument actually follows from a discussion of BCH codes, but that is way beyond the scope of this thesis). Note that since the entries of $H$ are elements of the extensions field $\F_{2^m}$ over $\F_2$. If one interprets $\F_{2^m}$ as a vector space over $\F_2$ with $m$ as dimension, then $h$ can be written as a matrix over $\F_2$ of dimension $mt \times n$. This leads to the following parity check matrix.
+\[
+	H = \begin{pmatrix}
+		g_t g\left(\gamma_0\right)^{-1} & \cdots & g_t g\left(\gamma_{n - 1}\right)^{-1}\\
+		\left(g_{t-1} + g_t \gamma_0\right)g\left(\gamma_0\right)^{-1} & \cdots & \left(g_{t-1} + g_t \gamma_{n-1}\right)g\left(\gamma_{n-1}\right)^{-1}\\
+		\vdots & \ddots & \vdots\\
+		\left( \sum\limits_{j=1}^{t} g_j \gamma_0^{j-1} \right) g\left(\gamma_0\right)^{-1} & \cdots & \left( \sum\limits_{j=1}^{t} g_j \gamma_{n-1}^{j-1} \right) g\left(\gamma_{n-1}\right)^{-1}
+	\end{pmatrix}.
+\]
+In order to emphasise the way in which $H$ fulfills \cref{eq:condForH} one can then write out $H = X Y Z$ with
+\begin{align*}
+X &= \begin{pmatrix}
+	g_t & 0 & 0 & \cdots & 0\\
+	g_{t-1} & g_t & 0 & \cdots & 0\\
+	\vdots & \vdots & \vdots & \ddots & \vdots\\
+	g_1 & g_2 & g_3 & \cdots & g_t
+\end{pmatrix}, \ Y = \begin{pmatrix}
+	1 & 1 & \cdots & 1\\
+	\gamma_0 & \gamma_1 & \cdots & \gamma_{n-1}\\
+	\vdots & \vdots & \ddots & \vdots\\
+	\gamma_0^{t-1} & \gamma_1^{t-1} & \cdots & \gamma_{n-1}^{t-1}
+\end{pmatrix} \ \text{and}\\
+Z &= \begin{pmatrix}
+	\frac{1}{g\left(\gamma_0\right)} & & & \\
+	 & \frac{1}{g\left(\gamma_1\right)} & & \\
+	 & & \ddots & \\
+	 & & & \frac{1}{g\left(\gamma_{n-1}\right)}
+\end{pmatrix}.
+\end{align*}
+
+Notice that it follows from \ref{eq:condForH} that the row space of $H$ must be dual to the Goppa code. Call this row space $V$ with basis $a$. Call the dual of this vector space $V^{*}$ and compute a basis for this called $b$. The basis vectors in $b$ is then equal to the rows of the generator matrix $G$. This is also easy to see from how I in \cref{sec:lc} wrote that for linear codes it must be true that $GH^T = 0$ implying that $G = \left( H^T \right)^{-1}$ (which should give a rather easy way of actually making $G$ from $H$ or vice versa).
+
+Since $H$ is an $mt \times n$ matrix, the matrix $G$ will have dimension $n \times k$ with $k \geq n - mt$ again being consistent with the fact that it is an $\left[n,k\right]$ linear code -- more specifically $G$ generates an irreducible binary $\left[n,k\right]$ Goppa code with Generator matrix $G$, parity check matrix $H$ and with
+\begin{equation}
+\label{eq:relForK}
+k \geq n - mt.
+\end{equation}
+
+
+
+\section{Minimum Distance In Irreducible Binary Goppa Codes}
+\label{sec:minDistIrrBinGoppa}
+
+In this section  I will follow \cite{EOS} in trying to find the minimum distance for an irreducible binary Goppa code, but first let me refresh the reader's memory on some important aspects of abstract algebra.
+
+
+
+\subsection{Some Preliminary Observations}
+\label{subsec:preAlgebra}
+
+First off comes two well-known results from abstract algebra (the second one might better be known as a special case of Sylow's theorems). For proofs that I have left out and relevant definitions I will refer the reader to \cite{lauritzen}. Let $G$ and $H$ be groups with $H$ being a subgroup of $G$ and denote by $G/H$ the \emph{set of left cosets} of $H$.
+\begin{thm}[Lagrange]
+\label{thm:LagrangesTheorem}
+	If $G \subseteq G$ is a subgroup of a finite group $G$, then
+	\[
+		\size{G} = \size{G/H} \size{H}.
+	\]
+\end{thm}
+\Cref{thm:LagrangesTheorem} implies that the order of a subgroup divides the order of the group.
+\begin{thm}[Cauchy]
+\label{thm:CauchysTheorem}
+	Let $G$ be a finite group and $p$ be a prime. If $p$ divides the order of $G$, then $G$ has an element of order $p$.
+\end{thm}
+
+Now, Let $\K$ be a field with multiplicative identity element $1_{\K}$ and additive identity element $0_{\K}$. Then the characteristic of the field $\K$ is defined in the following way.
+\begin{defi}[Field Characteristic]
+\label{def:fieldChar}
+	The \emph{field characteristic} of a field $\K$, denoted $char\left(\K\right)$, is the smallest number $p$ such that $p \cdot 1_{\K} = 0_{\K}$, where
+	\[	
+		p \cdot 1_{\K} = \underbrace{1_{\K} + \cdots + 1_{\K}}_{\text{$p$ times}} = 0_{\K}.
+	\]
+	If there exists no such $p$, then $char\left(\K\right) = 0$.
+\end{defi}
+Since $\F_{2^m}$ is a finite field it cannot have characteristic $0$ (because all natural numbers are a product of prime numbers). This means that $char\left(\F_{2^m}\right) > 0$ and then $1_{\F_{2^m}}$ will generate an additive subgroup of some order $p$. \Cref{thm:LagrangesTheorem} states that this $p$ will divide the order of the whole group $\F_{2^m}$, which is $2^m$. Now the job is to find $p$. Notice that $2^m$ is a multiple of the prime number $2$. \Cref{thm:CauchysTheorem} then implies that the additive subgroup will have an element of order $2$. Let $a \in \F_{2^m}$ be such an element then this means that
+\begin{equation}
+\label{eq:cauchyHelper}
+	a+a = a\left(1_{\F_{2^m}}+1_{\F_{2^m}}\right) = 0_{\F_{2^m}} \Rightarrow 1_{\F_{2^m}}+1_{\F_{2^m}} = 2_{\F_{2^m}} = 0_{\F_{2^m}}
+\end{equation}
+and thus $char\left(\F_{2^m}\right) = 2$.
+
+Now I am ready to introduce the Frobenius automorphism.
+\begin{defi}[Frobenius Automorphism]
+	Let $\F$ be a field of field characteristic $p$ and let $\alpha \in \F$. The \emph{Frobenius automorphism} on $\F$ is the map
+	\begin{align*}
+		\phi: &\F \rightarrow \F,\\
+		&\alpha \mapsto \alpha^p.
+	\end{align*}
+\end{defi}
+Remember that an automorphism is an isomorphism from an object to itself whilst preserving the structure of said object. The following corollary is then achieved.
+\begin{cor}
+\label{lem:uniqueSquareRoot}
+	If $x \in \F_{2^m}$, then the map
+	\begin{align*}
+		\F_{2^m} &\rightarrow \F_{2^m}\\
+		x &\mapsto x^2
+	\end{align*}
+	is the Frobenius automorphism on $\F_{2^m}$ and therefore every element $y \in \F_{2^m}$ has a unique square root.
+\end{cor}
+
+Now the Frobenius map
+\begin{align*}
+\F_{2^m}\left[X\right] &\rightarrow \F_{2^m}\left[X\right]\\
+f\left(X\right) = \sum\limits_{i=0}^{n} f_i X^i &\mapsto \left(f\left(X\right)\right)^2 = \sum\limits^{n}_{i=0} f_i^2 X^{2i}
+\end{align*}
+is an injective ring homomorphism. Its image $\F_{2^m}\left[X^2\right]$ is a set of polynomials being perfect squares of the ring $\F_{2^m}\left[X\right]$ and because this is its image, the map is not surjective.
+
+
+
+\subsection{Actually Finding The Minimum Distance}
+
+Finally I am ready to continue on the task of reiterating how one finds the minimum distance of an irreducible binary Goppa code.
+
+Let $\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right)$ be an irreducible binary Goppa code. Again $g \in \F_{2^m}$ is the irreducible binary Goppa polynomial used and the used code support is $\mathbf{L} = \left\{ \gamma_0, \cdots , \gamma_{n-1} \right\} \in \F_{2^m}^n$ such that $g\left(\gamma_i\right) \neq 0$  and $\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right)$ consists of codewords $\vec{c} = \left(\vec{c}_0, \cdots, \vec{c}_{n-1}\right) \in \F_{2}^n$.
+
+Define $\mathcal{T}_{\vec{c}} = \left\{ i \ : \ \vec{c}_i = 1 \right\}$ and
+\[	
+	\sigma_{\vec{c}}\left(X\right) = \prod\limits_{j \in \mathcal{T}_{\vec{c}}} \left(X - \gamma_j\right) \in \F_{2^m}\left[X\right].
+\]
+Let $\bullet \setminus \bullet$ denote the set minus operator. Now the differential coefficient of $\sigma_{\vec{c}}\left(X\right)$ will then be
+\[
+	\sigma_{\vec{c}}'\left(X\right) = \sum\limits_{i \in \mathcal{T}_{\vec{c}}} \prod\limits_{j \in \mathcal{T}_{\vec{c}} \setminus \left\{ i \right\} } \left(X - \gamma_j\right).
+\]
+Using \cref{eq:altSynForGoppa} one then gets that
+\[
+	\sigma_{\vec{c}}\left(X\right) S_{\vec{c}}\left(X\right) \equiv \sigma_{\vec{c}}'\left(X\right) \pmod {g\left(X\right)}.
+\]
+
+From here it can be seen that $\sigma_{\vec{c}}$ has roots in any $\gamma_i$ for all $0 \leq i \leq n-1$ and since $g\left(\gamma_i\right) \neq 0$ (again for all $0 \leq i \leq n-1$) it follows that the two polynomials $g\left(X\right)$ and $\sigma_{\vec{c}}\left(X\right)$ has no common roots and thus must be relatively prime. So $\sigma_{\vec{c}}\left(X\right)$ must be invertible modulo $g\left(X\right)$ with inverse $\sigma_{\vec{c}}^{-1}\left(X\right)$ and then
+\begin{equation}
+\label{eq:invOfSigma}
+\sigma_{\vec{c}}'\left(X\right) \sigma_{\vec{c}}^{-1}\left(X\right) \equiv S_{\vec{c}}\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+It then follows that
+\[	
+	\forall \vec{c} \in \F_{2}^n \ : \ \vec{c} \in \mathcal{G}\left(\mathbf{L}, g\left(X\right)\right) \Leftrightarrow \sigma_{\vec{c}}'\left(X\right) \equiv 0 \pmod {g\left(X\right)}.
+\]
+
+Note that $\F_{2^m}$ has the property that $i \sigma_i X^{i-1} = 0$ for every even $i$ and thus the polynomial $\sigma_{\vec{c}}'\left(X\right) = \sum_{i = 1}^{n} i \sigma_i X^{i-1}$ must be a perfect square. Now, $g\left(X\right)$ being irreducible also means that
+\[
+	\forall \vec{c} \in \F_{2}^n \ : \ \vec{c} \in \mathcal{G}\left(\mathbf{L}, g\left(X\right)\right) \Leftrightarrow \sigma_{\vec{c}}'\left(X\right) \equiv 0 \pmod {g^2\left(X\right)}.
+\]
+
+Let $\mathrm{deg}\left(\bullet\right)$ denote the function that returns the degree of a given polynomial. It follows that for any codeword $\vec{c} \in \mathcal{G}\left(\mathbf{L},g\left(X\right)\right) \setminus \left\{ \vec{0} \right\}$, the weight of the codeword can be described by
+\[
+	w\left(\vec{c}\right) = \mathrm{deg}\left(\sigma_{\vec{c}}\left(X\right)\right) \geq 1 + \mathrm{deg}\left(\sigma_{\vec{c}}'\left(X\right)\right) \geq 2 \ \mathrm{deg}\left(g\left(X\right)\right) + 1.
+\]
+
+This proves the following result.
+\begin{thm}[Minimum distance of of an irreducible binary Goppa code]
+	Let	$\mathcal{G}\left(\mathbf{L},g\left(X\right)\right)$ be an irreducible binary Goppa code with $g$ being an irreducible binary Goppa polynomial of degree $t$. Then the \emph{minimum distance} of this Goppa code is $2t + 1$.
+\end{thm}
+This means that any irreducible binary Goppa code is an $e$-error-correcting code with $e = t = \mathrm{deg}\left(g\right)$. In \cref{sec:decGoppa} I will go over how to find the errors and how to correct them.
+
+
+
+\section{Decoding Irreducible Binary Goppa Codes}
+\label{sec:decGoppa}
+
+Let $\mathcal{G}\left(\mathbf{L},g\left(X\right)\right)$ be an irreducible binary Goppa code with code support $\mathbf{L} = \left\{ \gamma_0, \cdots, \gamma_{n-1} \right\}$ and irreducible binary Goppa polynomial $g \in \F_{2^m}\left[X\right]$ of degree $t$. Suppose you receive a message $\vec{m} = \left(\vec{m}_0, \vec{m}_1, \cdots, \vec{m}_{n-1}\right) \in \F_2^n$ that is supposed to be a codeword $\vec{c} = \left(\vec{c}_0, \vec{c}_1, \cdots, \vec{c}_{n-1}\right) \in \mathcal{G}\left(\mathbf{L},g\left(X\right)\right)$, but it is sent over a noisy channel that introduced errors. Let $\vec{e} = \left(\vec{e}_0, \vec{e}_1, \cdots, \vec{e}_{n-1}\right) \in \F_2^n$ be an error vector with $w\left(\vec{e}\right) \leq t$ and let $\bullet \xor \bullet$ be the binary bitwise XOR operation. Then
+\[	
+	\vec{m} = \vec{c} \xor \vec{e}.
+\]
+One might also write
+\[
+	\vec{e} = \vec{m} - \vec{c}.
+\]
+
+The problem is now to get back the codeword $\vec{c}$ knowing only $\vec{m}$.
+
+Start off by computing the syndrome $S_{\vec{m}}\left(X\right)$ but notice first that\\
+$S_{\vec{c}}\left(X\right) \equiv 0 \pmod {g\left(X\right)}$ so that
+\begin{align*}
+S_{\vec{m}}\left(X\right) &\equiv S_{\vec{e}}\left(X\right)\\
+	&\equiv \sum\limits_{i=0}^{n-1} \frac{\vec{e}_i}{X - \gamma_i} \pmod {g\left(X\right)}.
+\end{align*}
+By definition this can be computed using the parity check matrix $H$ for $\mathcal{G}\left(\mathbf{L},g\left(X\right)\right)$ or by using just the received message $\vec{m}$.
+
+Now let $\mathcal{T}_{\vec{e}} = \left\{ i \ : \ \vec{e}_i = 1 \right\}$ and define the \emph{error locator polynomial} $\sigma_{\vec{e}}\left(X\right)$ and its \emph{companion polynomial} $\sigma_{\vec{e}}'\left(X\right)$ as
+\begin{align*}
+	\sigma_{\vec{e}}\left(X\right) &= \prod\limits_{j \in \mathcal{T}_{\vec{e}}} \left(X - \gamma_j\right) \in \F_{2^m}\left[X\right],\\
+	\sigma_{\vec{e}}'\left(X\right) &= \sum\limits_{i \in \mathcal{T}_{\vec{e}}} \prod\limits_{j \in \mathcal{T}_{\vec{e}} \setminus \left\{ i \right\} } \left(X - \gamma_j\right).
+\end{align*}
+Notice how $\sigma_{\vec{e}}\left(X\right)$ and $\sigma_{\vec{e}}'\left(X\right)$ have no common factors meaning that they are relatively prime and how $\mathrm{deg}\left(\sigma_{\vec{e}}\left(X\right)\right) \leq t$ whilst $\mathrm{deg}\left(\sigma_{\vec{e}}'\left(X\right)\right) \leq \mathrm{deg}\left(\sigma_{\vec{e}}\left(X\right)\right)$. Observe also that
+\begin{equation}
+\label{eq:6FromEOS}
+S_{\vec{e}}\left(X\right) \sigma_{\vec{e}}\left(X\right) \equiv \sigma_{\vec{e}}'\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+
+Suppose some algorithm could give the monic polynomial $a\left(X\right)$ of lowest degree such that $a\left(X\right) \neq 0$ and a polynomial $b\left(X\right)$ of lower degree such that
+\begin{equation}
+\label{eq:9.5.5fromVanLint}
+S_{\vec{e}}\left(X\right) a\left(X\right) \equiv b\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+Given \cref{eq:invOfSigma}, \cref{eq:9.5.5fromVanLint} can be rewritten as
+\[
+	\sigma_{\vec{e}}'\left(X\right) \sigma_{\vec{e}}^{-1}\left(X\right) a\left(X\right) \equiv b\left(X\right) \pmod {g\left(X\right)}
+\]
+and multiplying by $\sigma_{\vec{e}}\left(X\right)$ and rearranging this gives
+\[
+	b\left(X\right) \sigma_{\vec{e}}\left(X\right) - \sigma_{\vec{e}}'\left(X\right)a\left(X\right) \equiv 0 \pmod {g\left(X\right)}.
+\]
+Since the degree of the left hand side is less than $\mathrm{deg}\left(g\left(X\right)\right)$, it must be $0$. Then since $\sigma_{\vec{e}}\left(X\right)$ and $\sigma_{\vec{e}}'\left(X\right)$ are relatively prime $\sigma_{\vec{e}}\left(X\right)$ must divide $a\left(X\right)$, but given that $a\left(X\right)$ is of least degree, it follows that $a\left(X\right) = \sigma_{\vec{e}}\left(X\right)$. This means that once $a\left(X\right)$ is found, then $\sigma_{\vec{e}}\left(X\right)$ and then also $\sigma_{\vec{e}}'\left(X\right)$ can be found. Once these polynomials are known then the positions $0 \leq i \leq n-1$ for which $\vec{e}_i \neq 0$ can be extracted and the vector $\vec{e}$ then becomes known. The existence of such an algorithm that leads to \cref{eq:9.5.5fromVanLint} would prove that there is indeed a way to decode irreducible binary Goppa polynomials. As will be revealed shortly there is actually one based on the extended euclidean algorithm for univariate polynomials that will perform exactly the task that we want it to \cite[pp. 144-145]{vanlint}\cite{EOS}.
+
+
+
+\subsection{The Decoding Algorithm}
+\label{subsec:EOSalgorithm}
+
+I will now follow \cite{EOS} and go through why their algorithm works, finishing up with showing the actual algorithm itself. Then comes a minor discussion about its running time.
+
+First of all compute the syndrome using the parity check matrix as described previously, define the error locator polynomial and arrive at \cref{eq:6FromEOS} as described previously.
+
+Split up $\sigma_{\vec{e}}\left(X\right)$ into squares and non-squares yielding
+\begin{equation}
+\label{eq:splitSigma}
+\sigma_{\vec{e}}\left(X\right) = \alpha^2\left(X\right) + X \beta^2\left(X\right).
+\end{equation}
+In \cref{subsec:preAlgebra} I laid out how $char\left(\F_{2^m}\right) = 2$ and due to \cref{eq:cauchyHelper} I then get that $\sigma_{\vec{e}}'\left(X\right) = \beta^2\left(X\right)$. This means that \cref{eq:6FromEOS} can be rewritten as
+\begin{equation}
+\label{eq:7fromEOS}
+\beta^2\left(X\right) \left(X S_{\vec{e}}\left(X\right) + 1\right) \equiv \alpha^2\left(X\right) S_{\vec{e}}\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+
+Assume that $\vec{e}$ does not constitute a codeword in $\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right)$ so\\
+$S_{\vec{e}}\left(X\right) \nequiv 0 \pmod {g\left(X\right)}$. This means that there must exist an inverse of $S_{\vec{e}}\left(X\right)$ modulo $g\left(X\right)$. Set $T\left(X\right) = S_{\vec{e}}^{-1}\left(X\right)$ and multiply this into \cref{eq:7fromEOS} to achieve
+\begin{equation}
+\label{eq:8fromEOS}
+\beta^2\left(X\right) \left(X + T\left(X\right)\right) \equiv \alpha^2\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+
+\Cref{lem:uniqueSquareRoot} comes in handy now. Let $\tau\left(X\right) \in \F_{2^m}\left[X\right]$ be the unique square root of the polynomial $T\left(X\right) + X$ such that $\tau\left(X\right) \tau\left(X\right) \equiv T\left(X\right) + X \pmod {g\left(X\right)}$. Now take the square root of \cref{eq:8fromEOS} and arrive at
+\begin{equation}
+\label{eq:9fromEOS}
+\beta\left(X\right) \tau\left(X\right) \equiv \alpha\left(X\right) \pmod {g\left(X\right)}.
+\end{equation}
+
+All of this has so far just been rewriting what has already been introduced. Note that $\tau\left(X\right)$ and $g\left(X\right)$ is already known and then the problem is now to find a unique pair $\alpha\left(X\right)$ and $\beta\left(X\right)$ of least degree so that \cref{eq:9fromEOS} is fulfilled. This is where the extended euclidean algorithm for univariate polynomials comes into play.
+
+Remember that by assumption $\mathrm{deg}\left(\sigma_{\vec{e}}\left(X\right)\right) \leq t.$ This means that $\mathrm{deg}\left(\alpha\left(X\right)\right) \leq \left\lfloor \frac{t}{2} \right\rfloor$ and $\mathrm{deg}\left(\beta\left(X\right)\right) \leq \left\lfloor \frac{t-1}{2} \right\rfloor$. This also means that the extended euclidean algortihm can actually be used.
+
+The extended euclidean algorithm for univariate polynomials produces polynomials $\alpha_k\left(X\right) + \beta_k\left(x\right) \tau_k\left(X\right) \equiv 0 \pmod {g\left(X\right)}$ in each iteration with $\mathrm{deg}\left(\beta_k\left(X\right)\right) = \mathrm{deg}\left(g\left(X\right)\right) - \mathrm{deg}\left(\alpha_{k-1}\left(X\right)\right)$. This is of particular importance, because after each iteration the degree of $\beta$ increases and the degree of $\alpha$ decreases. This means that there comes a point where both polynomials are below the bounds that have just been laid out. So running this algorithm until the first iteration after $\mathrm{deg}\left(\alpha_k\left(X\right)\right) = \left\lfloor \frac{t+1}{2} \right\rfloor$ yields the polynomial $\alpha_k\left(X\right)$ with
+\[
+	\mathrm{deg}\left(\alpha_k\left(X\right)\right) \leq \left\lfloor \frac{t+1}{2} \right\rfloor - 1 \leq \left\lfloor \frac{t}{2} \right\rfloor.
+\]
+In this iteration a $\beta_k\left(X\right)$ is also achieved that will have
+\begin{align*}
+\mathrm{deg}\left(\beta_k\left(X\right)\right) &= \mathrm{deg}\left(g\left(X\right)\right) - \mathrm{deg}\left(\alpha_k\left(X\right)\right)\\
+	&\leq t - \left\lfloor \frac{t+1}{2} \right\rfloor = \left\lfloor \frac{t-1}{2} \right\rfloor.
+\end{align*}
+
+So now set $\alpha\left(X\right) = \alpha_k\left(X\right)$ and $\beta\left(X\right) = \beta_k\left(X\right)$ in \cref{eq:9fromEOS} and the only remaining problem is to find the roots of \cref{eq:splitSigma}, which will lead to the vectors $\vec{e}$ and $\vec{c}$.
+
+The final and full algorithm due to \cite{EOS} can be found in \cref{alg:errCorrIrrBinGoppa}.
+
+\begin{algorithm}[ht!]
+	\centering
+	\caption{Decoding Algorithm for An Irreducible Binary Goppa Code}
+	\label{alg:errCorrIrrBinGoppa}
+	\begin{algorithmic}
+		\State \textbf{Input:} An irreducible binary Goppa code $\mathcal{G}\left(\mathbf{L}, g\left(X\right)\right)$ and a vector $\vec{m} = \vec{c} \xor \vec{e}$ with $\vec{c}$ being a codeword and $\vec{e}$ an error vector.
+		\Statex
+		\State \textbf{Output:} the codeword $\vec{c}$ and the error vector $\vec{e}$.
+		\Statex
+		\State $S_{\vec{m}}\left(X\right) = \sum\limits_{i=0}^{n-1} \frac{\vec{m}_i}{X - \gamma_i} \pmod {g\left(X\right)}$
+		\Comment{Compute the syndrome of $\vec{m}$}
+		\State (or use the parity check matrix $H$)
+		\Statex
+		\If{$S_{\vec{m}}\left(X\right) \equiv 0 \pmod {g\left(X\right)}$}
+			\State \textbf{Return} $\left(\vec{m}, \vec{0}\right)$
+			\Comment{There are no errors, $\vec{m}$ is a codeword}
+		\Else
+			\State $T\left(X\right) = S_{\vec{m}}^{-1}\left(X\right) \pmod {g\left(X\right)}$
+			\Comment{There are errors, $\vec{m}$ is not a codeword}
+			\State $\tau\left(X\right) \equiv \sqrt{T\left(X\right) + X} \pmod {g\left(X\right)}$
+		\EndIf
+		\Statex
+		\State /*Extended euclidean algorithm*/
+		\State $i = 0$; $r_{-1}\left(X\right) = \alpha_{-1}\left(X\right) = g\left(X\right)$; $r_0\left(X\right) = \alpha_0\left(X\right) = \tau\left(X\right)$; $\beta_{-1}\left(X\right) = 0$; $\beta_0\left(X\right) = 1$
+		\While{$\mathrm{deg}\left(r_i\left(X\right)\right) \geq \left\lfloor \frac{t+1}{2} \right\rfloor$}
+			\State $i = i + 1$
+			\State Determine $q_i\left(X\right)$, $r_i\left(X\right)$ such that $r_i\left(X\right) = r_{i-2}\left(X\right) - q_i\left(X\right) r_{i-1}\left(X\right)$ and
+			\State $\quad\mathrm{deg}\left(r_i\left(X\right)\right) < \mathrm{deg}\left(r_{i-1}\left(X\right)\right)$
+			\State $\beta_i\left(X\right) = \beta_{i-2}\left(X\right) + q_i\left(X\right) \beta_{i-1}\left(X\right)$
+			\State $\alpha_i\left(X\right) = r_i\left(X\right)$
+		\EndWhile
+		\Statex
+		\State $\sigma\left(X\right) = a^2 \left(\left(\alpha_i\left(X\right)\right)^2 + X \left(\beta_i\left(X\right)\right)^2\right)$ with $a \in \F_{2^m}$ such that $\sigma\left(X\right)$ is monic
+		\Statex
+		\For{$i = 0$ to $n-1$}\Comment{Determination of zeroes of $\sigma_{\vec{e}}\left(X\right)$}
+			\If{$\sigma\left(\gamma_i\right) = 0$}
+				\State $\vec{e}_i = 1$
+			\Else
+				\State $\vec{e}_i = 0$
+			\EndIf
+			\State $\vec{c} = \vec{m} \xor \vec{e}$
+		\EndFor
+		\Statex
+		\State \textbf{Return} $\left(\vec{c}, \vec{e}\right)$
+	\end{algorithmic}
+\end{algorithm}
+
+
+
+\subsubsection{Time Complexity Of The Decoding Algorithm}
+\label{subsubsec:runTimeOfEOSalgorithm}
+
+Now for the running time of \cref{alg:errCorrIrrBinGoppa}. This will be done according to \cite{EOS}.
+
+Remember how the irreducible binary Goppa code is an $\left[n,k\right]$ Goppa code. Well This means that if the $S_{\vec{m}}\left(X\right)$ is computed using the parity check matrix $H$ then this step in the algorithm takes $\left(n - k\right)n$ binary operations. In order to compute $T\left(X\right)$ the extended euclidean algorithm is used. Since $g\left(X\right)$ is a polynomial of degree $t$ with coefficients of size $m$ this step takes $\mathcal{O}\left(t^2 m^2\right)$ operations. The same is true for the later uses of the same algorithm. Computing the square root of $T\left(X\right) + X$ is a linear mapping on the ideal $\F_{2^m}/g\left(X\right)$ so this step also takes $\mathcal{O}\left(t^2 m^2\right)$ operations. The last step of determining the the zeroes of $\sigma_{\vec{e}}\left(X\right)$ is the hardest though and takes $n \left(tm^2 + tm\right)$ binary operations. Note however that $mt \geq \left(n-k\right)$ so the time complexity of the algorithm ends up being
+\[
+	\mathcal{O}\left(ntm^2\right).
+\]
+

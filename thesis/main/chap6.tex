@@ -1,0 +1,962 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 6: Better Security In The Quantum Random Oracle Model
+%% ============================================================================
+
+\chapter{How To Be Safe In The Quantum Random Oracle Model}
+\label{chap:betSecInTheQuaRanOraMod}
+
+In \cref{chap:achCCA2Sec} I laid out how one can transform the original McEliece PKC into a key encapsulation mechanism that is IND-$\mathrm{CCA}2$. Due to recent developments in the research field of quantum computers, it has become more and more interesting to see, if a public key cryptosystem can be used against adversaries that has access to a quantum computer (so-called \emph{quantum adversaries}). This chapter will then be all about how one might transform the original McEliece PKC into something that is secure against such adversaries. I note here, that if this is indeed possible, then the transformed cryptosystem will especially also be safe against attacks from any classical adversaries, since it is safe to assume that such an adversary will also have access to a classical computer and that a quantum computer will also be able to do all the calculations that a classical computer can do and then some. If this was not the case, then said quantum computer would not be of much use.
+
+Here I will as usual give some introduction to the topics that I will be talking about in \cref{sec:quaCom}. In \cref{sec:theTTraInTheQRO} I will follow their analysis of the $T$-tranformation from \cref{sec:theFirMod} in the case of a quantum adversary. As for \cref{sec:aNewSecTra} I will show how to build a new key encapsulation mechanism that is to replace the one from \cref{sec:theSecMod} in order to achieve $\mathrm{CCA}2$ security in the face of a quantum adversary. Finally I will show how the new transformed McEliece PKC is in \cref{sec:theFinCCASecKeyEncMecInTheQRO}.
+
+
+
+\section{A Brief Introduction To Quantum Computation}
+\label{sec:quaCom}
+
+The purpose of this section is to develop the framework about which some later proofs will be constructed. Therefore I will follow \cite{HHK} in giving a brief introduction to the necessary ideas and concepts, but not give a full introduction to the field of quantum computation. For a full introduction, I will suggest that the reader reads a proper textbook on the subject.
+
+
+
+\subsection{Qubits}
+\label{subsec:qubits}
+
+Just as normal computers, quantum computers have bits. They do differ however and therefore a specific name for these are needed. In the case of a quantum computer, a bit will be called a \emph{qubit}. The standard notation for such a qubit is \emph{$\ket{b}$}. This is the \emph{ket}-notation for a quantum superposition $b$:
+\[
+	\ket{b} = \begin{pmatrix}
+		b_0\\
+		\vdots\\
+		b_{n-1}
+	\end{pmatrix} \in \C^n.
+\]
+	
+For the purposes of this chapter, all that is needed however are bits, so the vector $\ket{b} \in \C^2$ will only have two entries and itself be a linear combination $\ket{b} = \alpha \ket{0} + \beta \ket{1}$ of the two basis vectors $\ket{0}$ and $\ket{1}$ with probability amplitudes $\alpha, \beta \in \C$ such that $\abs{\alpha}^2 + \abs{\beta}^2 = 1$. When this is the case, the quantum particle that gives rise to $\ket{b}$ is bound to be found in some state and thus it is said that the \emph{superposition} that it is in is \emph{normalised}.
+
+Notice that classical computers only deal with bits, that are either $0$ or $1$ whilst in the case of a quantum computer, a qubit can be some part of both. This is the essence of the superposition notion of the vector $\ket{b}$. Since $0$ and $1$ form the basis of vectors made with binary numbers, $\left\{ \ket{0}, \ket{1} \right\}$ is the basis of qubits. This basis is called the \emph{standard orthonormal computational basis}.
+
+Notice also that classical bits can be mapped to be qubits:
+\[
+	b \rightarrow 1 \cdot \ket{b} + 0 \cdot \ket{1 - b},
+\]
+where the subtraction is done modulo $2$.
+
+
+
+\subsection{Quantum Registers}
+\label{subsec:quaReg}
+
+Suppose you have a collection of qubits $\left\{ \ket{b_i} \right\}$. This collection will constitute a linear combination of all of them:
+\[
+	\left.\sum\limits_{\left(b_0, \cdots, b_{n-1}\right) \in \left\{ 0,1 \right\}^n} \alpha_{b_0 \cdots b_{n-1}} \cdot \ket{b_0 \cdots b_{n-1}} \ \middle\vert \ \alpha_{b_0, \cdots, b_{n-1}} \in \C^n.\right.
+\]
+This is a superposition and so it must still be normalised:
+\[
+	\sum\limits_{\left(b_0, \cdots, b_{n-1}\right) \in \left\{ 0,1 \right\}^n} \abs{\alpha_{b_0 \cdots b_{n-1}}}^2 = 1.
+\]
+
+Just as in the one-dimensional case, the basis $\left.\left\{ \ket{b_0 \cdots b_{n-1}} \right\} \ \middle\vert \ \left(b_0 \cdots b_{n-1}\right) \in \left\{ 0,1 \right\}^n\right.$ will be called the \emph{standard orthonormal computational basis}.
+
+
+
+\subsection{Measurements}
+\label{subsec:measurements}
+
+Just as any quantum mechanical particle, a qubit can be measured. For qubits, the measurement will be done in the standard orthonormal computational basis. When measuring, the superposition will \emph{collapse} into some specific state. This means that when measuring a qubit $\ket{b} = \alpha \cdot \ket{0} + \beta \cdot \ket{1}$, the result of the measurement will be $\ket{0}$ with probability $\abs{\alpha}^2$ and $\ket{1}$ with probability $\abs{\beta}^2$. Measuring a quantum register $\sum_{\left(b_0, \cdots, b_{n-1}\right) \in \left\{ 0,1 \right\}^n} \alpha_{b_0 \cdots b_{n-1}} \cdot \ket{b_0 \cdots b_{n-1}}$ however will provide the measurement $\ket{b_0 \cdots b_{n-1}}$ with probability $\abs{\alpha_{b_0 \cdots b_{n-1}}}^2$.
+
+The term ``collapse'' is used, because during measurement, the amplitudes of the superposition of a single qubit collapses into one of the combinations $\left\{ \pm\left(1,0\right), \pm\left(0,1\right) \right\}$. In the $n$-dimensional case, this means that all of the amplitudes are switched into $0$, except for the qubit that belongs to the exact state that is returned by the measurement, which will be switched to $1$.
+
+In code based games, performing such a measurement will be denoted by the function \emph{$\mathrm{Measure}\left(\bullet\right)$}.
+
+
+
+\subsection{Quantum Oracles And Quantum Adversaries}
+\label{subsec:quaOraAndQuaAdv}
+
+As for the standard random oracle model, some quantum oracles are needed. Let
+\[
+	O: \ \left\{ 0,1 \right\}^n \rightarrow \left\{ 0,1 \right\}^m
+\]
+and $\vec{x} \in \left\{ 0,1 \right\}^n$, $\vec{y} \in \left\{ 0,1 \right\}^m$.
+In \cite{BBCMW,BDFLSZ} quantum oracles are then viewed as a mapping:
+\[
+	\ket{\vec{x}}\ket{\vec{y}} \mapsto \ket{\vec{x}} \ket{\vec{y} \xor O\left(\vec{x}\right)}
+\]
+and so they will be here.
+
+Let $U$ be a unitary operation and when dealing with functions, let $\bullet \circ \bullet$ also denote the operation of function composition. Consider the quantum adversary $A$ with access to the quantum random oracle $O$. This is done using the sequence $U \circ O$ and writing $A^{\ket{O}}$ denotes that the oracles are \emph{quantum-accessible} by $A$ (meaning that $A$ can send qubits to an oracle). Note that this differs from normal random oracles, who can only process classical bits.
+
+
+
+\subsection{Quantum Random Oracle Model}
+\label{subsec:quaRanOraMod}
+
+Security games will be considered in the \emph{quantum random oracle model} (\emph{QROM}) almost in the same way as in the random oracle model. The difference is that the adversaries are considered to have quantum access to the random oracles that are involved. At the same time the adversaries will still have classical access to all other oracles, that are not quantum oracles.
+
+In 2012 Zhandry proved that if $A^{\ket{f}}$ issues at most $q$ quantum queries to $\ket{f}$, then it cannot distinguish between a random function
+\[
+	f \ : \ \left\{ 0,1 \right\}^m \rightarrow \left\{ 0,1 \right\}^n
+\]
+and a $2q$-wise independent function \cite{zhandry}. This means that quantum random oracles can be viewed as polynomials of sufficiently large degree. So the quantum random oracle $\ket{h}$ can be viewed as an oracle that evaluates a random polynomial of degree $2q$ over the finite field $\F_{2^n}$.
+
+
+
+\subsection{Correctness Of Public Key Cryptosystems In The QROM}
+\label{subsec:corOfPubKeyCryInTheQRO}
+
+Like in the classical case, a notion of correctness of public key cryptosystems will be needed in the quantum random oracle model. Let $\Pi = \Pi^O_1$ be a public key cryptosystem that is defined in relation to some random oracle $\ket{O_1}$. The correctness bound will again depend on the number of queries $q_{O_1}$ to $\ket{O_1}$.
+
+Suppose some quantum adversary $A$ that has access to the quantum random oracle $\ket{O_1}$ plays the following game on $\Pi = \left(G,E,D\right)$ with an oracle $O$.
+\begin{description}
+	\item[$\mathrm{\mathbf{COR-QRO}}$] Input to both $A$ and $O$ the security parameter $k$ of $\Pi$.
+		\begin{enumerate}
+			\item $O$ runs $G\left(k\right)$ to generate $\left(pk,sk\right)$ and gives this tuple to $A$.
+			\item $A^{\ket{O_1}}$ chooses a message $\vec{m}$ and gives to $O$.
+			\item $O$ encrypts $\vec{m}$, by computing $\vec{c} = E_{pk}\left(\vec{m}\right)$.
+			\item $O$ checks if $D_{sk}\left(\vec{c}\right) = \vec{m}$ and returns $1$ if this is not true and $0$ if this is true.
+		\end{enumerate}
+\end{description}
+Notice first that this differs from the game $\mathrm{COR-RO}$ in the last step, whereas in the classical case, $1$ is returned if the check passes and $0$ otherwise, whilst it is turned around in the quantum random oracle case. Now assume that $A$ makes at most $q_{O_1}$ quantum queries to the quantum random oracle $\ket{O_1}$. If
+\[
+	P\left( \mathrm{COR-QRO}^A_{\Pi} \Rightarrow 1 \right) \leq \delta\left( q_{O_1} \right)
+\]
+then $\Pi$ is said to be \emph{$\delta\left( q_{O_1} \right) $-correct}.
+
+
+
+\subsection{Algorithmic One-Way To Hiding}
+\label{subsec:AlgOneToHid}
+
+Let $\left[\bullet\right]$ denote the closed interval from $0$ to some number. That is $\left[\lambda\right] = \left[0, \lambda\right]$.
+
+Suppose you have an algorithm $A$ that has access to the quantum random oracle $\ket{O}$ and possibly other oracles as well. For such an algorithm and such an oracle, an extractor algorithm that returns a measurement $x'$ of a randomly chosen query to $\ket{O}$ will be defined as in \cref{alg:extractorAlgorithm}.
+
+\begin{center}
+	\begin{minipage}[ht!]{0.6\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$EXT\left[A, \ket{O}\right]\left(\mathit{inp}\right)$}
+			\label{alg:extractorAlgorithm}
+			\begin{algorithmic}
+				\State $i \xleftarrow{\$} \left[ q_{O} \right]$
+				\State Run $A^{\ket{O}}\left(\mathit{inp}\right)$ until the $i$'th query $\ket{\hat{\vec{x}}}$ to $\ket{O}$
+				\If{$i >$ number of queries to $\ket{O}$}
+					\State \textbf{Return} $\bot$
+				\Else
+					\State $\vec{x}' \leftarrow \mathrm{Measure}\left(\ket{\hat{\vec{x}}}\right)$
+					\State \textbf{Return} $\vec{x}'$
+				\EndIf
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+The following lemma about this extractor algorithm is made in \cite{HHK} and is an algorithmic adaptation of Lemma 5 in \cite{unruh}.
+
+\begin{lem}[Algorithmic One-way To Hiding]
+\label{lem:AOW2H}
+	Let $\ket{O} \ : \ \left\{ 0,1 \right\}^n \rightarrow \left\{ 0,1 \right\}^m$ be a quantum random oracle and let $A$ be a quantum algorithm issuing at most $q_O$ queries to $\ket{O}$ such that it on input $\vec{x} \in \left\{ 0,1 \right\}^n$, $\vec{y} \in \left\{ 0,1 \right\}^m$ outputs either $0$ or $1$. Let $F$ be any probabilistic algorithm that does not make any queries to $\ket{O}$ and input bit strings in $\left\{ 0,1 \right\}^{n+m}$. Then
+\begin{equation*}
+	\begin{aligned}
+		& \left\vert P\left( 1 = A^{\ket{O}}\left(\mathit{inp}\right) \ \middle\vert \ \vec{x} \xleftarrow{\$} \left\{ 0,1 \right\}^n, \ \mathit{inp} = F\left(\vec{x}, O\left(\vec{x}\right)\right)\right) - \right. \\
+			& \quad \left. P\left( 1 = A^{\ket{O}}\left(\mathit{inp}\right) \ \middle\vert \ \left(\vec{x},\vec{y}\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{n+m}, \ \mathit{inp} = F\left(\vec{x},\vec{y}\right) \right) \right\vert \\
+			& \qquad \leq 2 q_O \cdot \sqrt{P\left( \vec{x} = EXT\left[A, \ket{O}\right]\left(\mathit{inp}\right) \ \middle\vert \ \left(\vec{x},\vec{y}\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{n+m}, \ \mathit{inp} = F\left(\vec{x},\vec{y}\right)\right) }.
+	\end{aligned}
+\end{equation*}
+\end{lem}
+
+
+
+\subsection{Generic Quantum Search}
+\label{subsec:genQuaSea}
+
+A \emph{Bernoulli distribution} is the discrete probability distribution that describes how a random variable can take the value $1$ with probability $\lambda$ or the value $0$ with probability $1 - \lambda$, for $\lambda \in \left[0,1\right]$. For such a value $\lambda \in \left[0,1\right]$, denote by $B_{\lambda}$ such a Bernoulli distribution.
+
+If the value of a bit $b$ can be said to be coming from a Bernoulli distribution $B_{\lambda}$, then the above means that $P\left(b = 1\right) = \lambda$.
+
+Below is seen a problem from \cite{HRS,zhandry2}, that will lead on to what is needed in this section.
+\begin{prob}[Generic Quantum Search Problem (GSP)]
+\label{prob:GSP}
+	Let $B_{\lambda}$ be a Bernoulli distribution and let $X$ be some finite set with elements $x \in X$. Now define
+	\[
+		\mathrm{F} \ : \ X \rightarrow \left\{ 0,1 \right\}
+	\]
+	and suppose you are given quantum access to an oracle that upon input $x$ returns $\mathrm{F}\left(x\right)$. Find some $x$ such that $\mathrm{F}\left(x\right) = 1$ and for each $x$, $\mathrm{F}\left(x\right)$ is distributed according to $B_{\lambda}$.
+\end{prob}
+
+Here a slight variation of \cref{prob:GSP} is needed. This version is given in \cite{KLS} and is essentially the same, except for the fact that the Bernoulli parameter $\lambda\left(x\right)$ may depend on the input $x$, but is upper bounded by some global $\lambda \in \left[0,1\right]$. This is called the \emph{generic quantum search problem with bounded probabilities} (\emph{GSPB}) and is modelled as a code based game in \cref{alg:GSPB}.
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$\mathrm{GSPB_{\lambda}}$}
+			\label{alg:GSPB}
+			\begin{algorithmic}
+				\State $\left.\left(\lambda\left(x\right)\right) \ \middle\vert \ x \in X \leftarrow A_1\right.$
+				\If{$\exists x \in X \ : \ \lambda\left(x\right) > \lambda$}
+					\State \textbf{Return} $0$
+				\EndIf
+				\ForAll{$x \in X$}
+					\State $\mathrm{F}\left(x\right) \leftarrow B_{\lambda\left(x\right)}$
+				\EndFor
+				\State $x \leftarrow A_2^{\ket{F\left(\bullet\right)}}$
+				\State \textbf{Return} $\mathrm{F}\left(x\right)$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+The convention here will be that this game is denoted by $\mathrm{GSPB_{\lambda}}$, and $\mathrm{GSPB}_{\lambda}^A$ whenever $A$ plays the game. Just as for any of the other games seen so far, if $\mathrm{GSPB}_{\lambda}^A \Rightarrow 1$ then $A$ is said to win the game (is able to output a $\mathrm{F}\left(x\right) = 1$ and not $\mathrm{F}\left(x\right) = 0$). The following lemma about this game comes from \cite{KLS}.
+\begin{lem}
+\label{lem:GSPB}
+	Let $\lambda \in \left\{ 0,1 \right\}$ and let $A$ denote any quantum adversary with quantum access to the oracle $\ket{\mathrm{F}}$. Suppose $A$ plays the game $\mathrm{GSPB}_{\lambda}$ (from \cref{alg:GSPB}) and issues at most $q$ quantum queries to $\ket{\mathrm{F}}$, then
+	\[
+		P\left( \mathrm{GSPB}_{\lambda}^A \Rightarrow 1 \right) \leq 8 \cdot \lambda \cdot \left(q + 1\right)^2.
+	\]
+\end{lem}
+
+
+
+\section{Removing The Randomness In The QROM}
+\label{sec:theTTraInTheQRO}
+
+Recall the $T$-transformation from \cref{sec:theFirMod}. In \cref{subsec:ImpPCAFroCPA} it was shown that the correctness of the underlying cryptosystem that the transformation is done upon is changed by at most a factor of $q_h$ (equalling the total number of queries that an adversary at most poses to the random oracle $h$ in the game $\mathrm{COR-RO}$). This was because the randomness of the underlying cryptosystem was removed and replaced by a hash function. In the QROM however, one does not deal with the game $\mathrm{COR-RO}$, but instead the game $\mathrm{COR-QRO}$. This means that the bound on correctness is a bit different than in the classical case. Following \cite{HHK}, I will lay out how to arrive at a lemma about exactly that.
+
+Let $\Pi = \left(G,E,D\right)$ and $\Pi_1 = T\left(\Pi\right)$ be as in \cref{sec:theFirMod} with $\Pi$ being $\delta$-correct, $A$ be a quantum adversary playing the game $\mathrm{COR-QRO}$ with $\left(pk, sk\right)$ being some fixed key pair of $\Pi_1$. Furthermore suppose that $A$ is given quantum access to some oracle $h\left(\bullet\right)$ to which it sends at most $q_h$ queries. If $\mathcal{M}$ is the message space of $\Pi_1$, then $\vec{m} \in \mathcal{M}$ is a valid message of $\Pi_1$. Let also $\mathcal{R}$ be the randomness space being defined by $pk$. Denote by $\mathcal{R}_{\mathrm{bad}}$ the set of randomness that leads to an encryption of $\vec{m}$ using $\Pi$ that when decrypted does not give back the message $\vec{m}$. That is
+\[
+	\mathcal{R}_{\mathrm{bad}}\left(pk, sk, \vec{m}\right) = \left\{ \vec{r} \in \mathcal{R} \ \middle\vert \ D_{sk}\left(E_{pk}\left( \vec{m}; \vec{r}\right)\right) \neq \vec{m} \right\}.
+\]
+Now define the fraction of such bad randomness, $\delta\left(pk, sk, \vec{m}\right)$, as
+\[
+	\delta\left(pk, sk, \vec{m}\right) = \frac{\size{\mathcal{R}_{bad}\left(pk,sk, \vec{m}\right)}}{\size{\mathcal{R}}}
+\]
+along with
+\[
+	\delta\left(pk,sk\right) = \max\limits_{\vec{m} \in \mathcal{M}} \delta\left(pk, sk, \vec{m}\right).
+\]
+Note that this means that if one takes the expectation over the key pairs that $G$ can output, then $\delta = \mathrm{E}\left(\delta\left(pk,sk\right)\right)$.
+
+What is needed is an upper bound on $P\left(\mathrm{COR-QRO}^A \Rightarrow 1\right)$. So let $F\left(\bullet\right)$ be as in \cref{prob:GSP}, $f\left(\bullet\right)$ be some $2q_h$-wise independent hash function that $A$ cannot access, but the random oracle $h\left(\bullet\right)$ has internally and lastly let also $\mathrm{Sample}\left(\bullet\right)$ be a probabilistic algorithm that on input a set $Y$ returns an element $y \in Y$ uniformly at random. If however the function $\mathrm{Sample}\left(\bullet; \bullet\right)$ is used, then the second argument will be the explicit randomness that is to be used. That is $\mathrm{Sample}\left(Y; f\left(\vec{m}\right)\right)$ denotes the deterministic execution of $\mathrm{Sample}\left(Y\right)$, where $f\left(\vec{m}\right)$ is the randomness to be used. Now define $h\left(\bullet\right)$ as in \cref{alg:hFromHHKp28} and yet another quantum adversary $B = \left(B_1, B_2\right)$ as in \cref{alg:B1FromHHKp28,alg:B2FromHHKp28}. Suppose further that $B$ has a running time about that of $A$.
+%
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$B_1$}
+		\label{alg:B1FromHHKp28}
+		\begin{algorithmic}
+			\State $\left(pk, sk\right) \leftarrow G$
+			\ForAll{$\vec{m} \in \mathcal{M}$}
+				\State $\lambda\left(\vec{m}\right) = \delta\left(pk, sk, \vec{m}\right)$
+			\EndFor
+			\State \textbf{Return} $\lambda\left(\vec{m} \in \mathcal{M}\right)$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$B_2^{\ket{F\left(\bullet\right)}}$}
+		\label{alg:B2FromHHKp28}
+		\begin{algorithmic}
+			\State Pick a $2q_O$-wise hash $f$
+			\State $\vec{m}'' \leftarrow A^{\ket{h\left(\bullet\right)}}\left(pk,sk\right)$
+			\State \textbf{Return} $\vec{m}''$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$h\left(\vec{m}\right)$}
+		\label{alg:hFromHHKp28}
+		\begin{algorithmic}
+			\If{$F\left(\vec{m}\right) = 0$}
+				\State $h\left(\vec{m}\right) = \mathrm{Sample}\left(\mathcal{R} \setminus \mathcal{R}_{\mathrm{bad}}\left(pk,sk, \vec{m}\right); f\left(\vec{m}\right)\right)$
+			\Else
+				\State $h\left(\vec{m}\right) = \mathrm{Sample}\left(\mathcal{R}_{\mathrm{bad}}\left(pk,sk, \vec{m}\right); f\left(\vec{m}\right)\right)$
+			\EndIf
+			\State \textbf{Return} $h\left(\vec{m}\right)$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+%
+$B$ is an adversary against the game $\mathrm{GSPB}_{\lambda}$. It starts off by using $G$ to generate a key pair $\left(pk,sk\right)$ and then goes on to find the Bernoulli parameters $\lambda\left(\vec{m}\right) = \delta\left(pk, sk, \vec{m}\right)$ for each $\vec{m} \in \mathcal{M}$. Notice that these are bounded by
+\[
+	\lambda = \delta\left(pk,sk\right) = \max\limits_{\vec{m} \in \mathcal{M}} P\left( D_{sk}\left(  E_{pk}\left( \vec{m}\right)\right) \neq \vec{m} \right) .
+\]
+
+Supposing $\left(pk,sk\right)$ is kept fixed and $\vec{m} \in \mathcal{M}$ then, in the game $\mathrm{GSPB}_{\lambda}$, the random variable $F\left(\vec{m}\right)$ is distributed according to $B_{\lambda\left(\vec{m}\right)} = B_{\delta\left(pk,sk,\vec{m}\right)}$ for each such $\vec{m}$. Notice that the returned value from $h\left(\bullet\right)$ is distributed uniformly at random in $\mathcal{R}$ and so $h$ is a quantum random oracle.
+
+Now $A$ will win the game $\mathrm{COR-QRO}_{\Pi_1}$ if and only if it returns the message $\vec{m}$ such that $h\left(\vec{m}\right) \in \mathcal{R}_{\mathrm{bad}}\left(pk,sk,\vec{m}\right)$. This is equivalent to $F\left(\vec{m}\right) = 1$. If \cref{prob:GSP} is interpreted as a game (call it \emph{$\mathrm{GSP}_{\lambda}$}), then this is equivalent to the case in which $B$ wins the game $\mathrm{GSP}_{\lambda}$. So by using \cref{lem:GSPB}, it can be seen that
+\[
+		P\left( \mathrm{COR-QRO}_{\Pi_1}^A \Rightarrow 1 \ \middle\vert \ \left(pk,sk\right) \right) \leq P\left( \mathrm{GSP}_{\delta\left(pk,sk\right)}^B \Rightarrow 1 \right) \leq 8 \cdot \delta\left(pk, sk\right) \cdot \left( q_h + 1\right) ^2 .
+\]
+Averaging over all the possible key pairs $\left(pk,sk\right)$ that $G$ can output, this gives
+\[
+	\delta _1 \left( q_h \right) = P\left( \mathrm{COR-QRO}^A \Rightarrow 1 \right) \leq 8 \cdot \delta \cdot \left( q_h + 1\right) ^2
+\]
+proving the following.
+\begin{lem}
+\label{lem:TCorrInQROM}
+	Let $\Pi$ be a $\delta$-correct public key cryptosystem, $h$ be a hash function and let $\Pi_1 = T\left( \Pi , h \right) $. Then $\Pi_1$ is $\delta_1$-correct where $\delta_1 = \delta _1 \left( q_h \right) \leq 8 \cdot \left( q_h + 1 \right) ^2 \cdot \delta$.
+\end{lem}
+
+Now that correctness has been taken care of, it is time to move on to the security reduction. The thing is that the security reduction from $\mathrm{OW-CPA}$ to $\mathrm{OW-PCA}$ also works in the quantum random oracle model, which I will write about here (again following \cite{HHK} -- loosely being based upon \cite{TU}).
+
+So let $A$, $B$ and $h$ be as just before. $A$ is an $\mathrm{OW-CPA}$ quantum adversary and $B$ is an $\mathrm{OW-PCA}$ quantum adversary that runs in time about that of $A$. Assume that $B$ has (classical) access to a plaintext checking oracle $\mathrm{PCO}\left(\bullet, \bullet\right)$ and given that it simulates $A$ also has quantum access to $\ket{h\left(\bullet\right)}$ (being modelled here as a random $2q_h$-wise independent hash function). Assume further that $B$ makes at most $q_h$ queries to $\ket{h}$ and $q_P$ (classical) queries to $\mathrm{PCO}$.
+%
+\begin{center}
+\begin{minipage}[ht!]{0.8\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Games $G_7$-$G_9$ and $O$}
+		\label{alg:G7toG9andO}
+		\begin{algorithmic}
+			\State $\left(pk,sk\right) \leftarrow G$
+			\State $\vec{m} \xleftarrow{\$} \mathcal{M}$
+			\State $\vec{r} = h\left(\vec{m}\right)$ \Comment{$G_7$-$G_8$}
+			\State $\vec{r} \xleftarrow{\$} \mathcal{R}$ \Comment{$G_9, O$}
+			\State $\vec{c} = E_{pk}\left( \vec{m}; \vec{r}\right)$
+			\State $\vec{m}' \leftarrow B^{\ket{h\left(\bullet\right)}, \mathrm{PCO}\left(\bullet, \bullet\right)} \left(pk,\vec{c}\right)$ \Comment{$G_8$-$G_9$}
+			\State $\vec{m}' \leftarrow EXT\left[ B^{\mathrm{PCO}\left(\bullet, \bullet\right)}, \ket{h\left(\bullet\right)}\right] \left(pk, \vec{c}\right)$ \Comment{$O$}
+			\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.8\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{PCO}\left(\vec{m}'' \in \mathcal{M}, \vec{c}'\right)$}
+		\label{alg:PCOFromP28InHHK}
+		\begin{algorithmic}
+			\State $\vec{m}' = D_1\left(sk, \vec{c}'\right)$ \Comment{$G_7$}
+			\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m}'' \right\rrbracket \land \left\llbracket E_{pk}\left( \vec{m}'; h\left(\vec{m}'\right)\right) = \vec{c}' \right\rrbracket$ \Comment{$G_7$}
+			\State \textbf{Return} $\left\llbracket E_{pk}\left( \vec{m}''; h\left(\vec{m}''\right)\right) = \vec{c}' \right\rrbracket$ \Comment{$G_8,G_9,O$}
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+%
+The $\mathrm{PCO}$-oracle is defined as in \cref{alg:PCOFromP28InHHK} and the oracle $h$ is again defined as in \cref{alg:hFromHHKp28}. Consider then the games $G_7$ to $G_9$ and $O$ from \cref{alg:G7toG9andO}.
+
+The game $G_7$ is just the original $\mathrm{OW-PCA}$ game and so
+\[
+	P\left( G_7^B \Rightarrow 1 \right) = Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right).
+\]
+
+In game $G_8$ the plaintext checking oracle is replaced by a simulation, that no longer makes use of the secret key. Note that $G_8$ proceeds just as $G_7$, up until the time, that $B$ submits a problematic query to $\mathrm{PCO}$. Call this event \emph{$\mathrm{BADR}$}. Now since if $\mathrm{BADR}$ does not occur, $G_7$ and $G_8$ proceed identically, this means that
+\[
+	\abs{P\left( G_8^B \Rightarrow 1 \right) - P\left( G_7^B \Rightarrow 1 \right) } \leq P\left( \mathrm{BADR} \right) .
+\]
+If however $B$ does make a problematic query, then there must exist some adversary $F$ that can perfectly simulate $G_7$ and $G_8$ and win the game $\mathrm{COR-QRO}_{\Pi_1}$. From \cref{lem:TCorrInQROM} it then follows that
+\[
+	P\left( \mathrm{BADR} \right) \leq P\left( \mathrm{COR-QRO}^F_{\Pi_1} \Rightarrow 1 \right) \leq 8 \cdot \left( q_h + q_P + 1 \right) ^2 \cdot \delta .
+\]
+
+In the game $G_9$ $\vec{r} = h\left(\vec{m}\right)$ is replaced by a uniformly random $\vec{r}$.
+%
+\begin{center}
+\begin{minipage}[ht!]{0.5\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{F}\left(\vec{m}, \vec{r}\right)$}
+		\label{alg:FFromHHKp29}
+		\begin{algorithmic}
+			\State $\left(pk, sk\right) \leftarrow G$
+			\State $\vec{c} = E_{pk}\left( \vec{m}; \vec{r}\right)$
+			\State $\mathit{inp} = \left(pk, \vec{c}\right)$
+			\State \textbf{Return} $\mathit{inp}$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+%
+Let the extractor algorithm of game $O$ be defined as in \cref{alg:extractorAlgorithm} and let $x = \vec{m}$ and $y = \vec{r}$. Considering \cref{alg:FFromHHKp29} and applying \cref{lem:AOW2H} it follows that
+\[
+	\abs{P\left( G_9^B \Rightarrow 1 \right) - P\left( G_8^B \Rightarrow 1 \right)} \leq 2 \cdot q_h \cdot \sqrt{P\left( O^B \Rightarrow 1 \right)}.
+\]
+
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$C\left(pk, \vec{c}\right)$}
+			\label{alg:CFromHHKp29}
+			\begin{algorithmic}
+				\State $\vec{m}' \leftarrow B^{\ket{h\left(\bullet\right)}, \mathrm{PCO}\left(\bullet,\bullet\right)}\left(pk, \vec{c}\right)$
+				\State \textbf{Return} $\vec{m}'$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+Now let $C$ be an adversary against the $\mathrm{OW-CPA}$ security of $\Pi$. It is rather trivially constructed in \cref{alg:CFromHHKp29}. It simulates game $G_9$ for $B$ and outputs $\vec{m}' = \vec{m}$ if $B$ wins in game $G_9$. This means that
+\[
+	P\left( G_9^B \Rightarrow 1 \right) = Adv_{\Pi}^{\mathrm{OW-CPA}}\left(C\right) \leq \sqrt{Adv_{\Pi}^{\mathrm{OW-CPA}}\left(C\right)}.
+\]
+
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+			\center
+			\caption{$\mathrm{D}\left(pk, \vec{c}\right)$}
+			\label{alg:DFromHHKp29}
+			\begin{algorithmic}
+				\State $\vec{m}' \leftarrow EXT\left[ B^{\mathrm{PCO}\left(\bullet,\bullet\right)}, \ket{h\left(\bullet\right)} \right] \left(pk, \vec{c}\right)$
+				\State \textbf{Return} $\vec{m}'$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+In \cref{alg:DFromHHKp29} is constructed another trivial adversary against the $\mathrm{OW-CPA}$ security of $\Pi$. It is called $\mathrm{D}$ and Simulates game $O$ for $B$, thus obtaining
+\[
+	P\left( O^B \Rightarrow 1 \right) = Adv_{\Pi}^{\mathrm{OW-CPA}}\left(\mathrm{D}\right).
+\]
+
+Now collecting all the probabilities deduced from the games in this section and combining $C$ and $\mathrm{D}$ into a single $\mathrm{OW-CPA}$ adversary $A$ yields
+\begin{equation}
+\label{eq:boundForTInTheQROM}
+	Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right) \leq 8 \cdot \left( q_h + q_P + 1 \right) ^2 \cdot \delta + \left( 1 +q_h \right) \cdot \sqrt{Adv_{\Pi}^{\mathrm{OW-CPA}}\left(A\right)}.
+\end{equation}
+This proves the following theorem.
+\begin{thm}
+\label{thm:TInTheQROM}
+	Let $\Pi$ be a public key that is $\mathrm{OW-CPA}$ in the random oracle model, $h$ be a hash function and let $\Pi_1 = T\left( \Pi , h \right) $. Then $\Pi_1$ is $\mathrm{OW-PCA}$ in the quantum random oracle model.
+\end{thm}
+
+
+
+\section{A New Second Transformation}
+\label{sec:aNewSecTra}
+
+In the last section, it was shown that the $T$-transformation from \cref{sec:theFirMod} also can provide $\mathrm{OW-PCA}$ security in the quantum random oracle model. Just as in the previous chapter, what is actually wanted is IND-$\mathrm{CCA}2$ security but this time in the quantum random oracle model. Just like in \cref{sec:theSecMod} this section will introduce a second transformation, that provides a security reduction from IND-$\mathrm{CCA}2$ to $\mathrm{OW-PCA}$. There are some differences here though, that will make sure, that the reduction also works in the QROM. Unlike before this transformation has explicit rejection and requires that the cryptosystem that it is applied upon is deterministic.
+
+Let $\Pi_1 = \left(G_1, E_1, D_1\right)$ be a deterministic and rigid public key cryptosystem with message space $\mathcal{M}$ (where all valid messages have length $k$). Let also $g$ and $g'$ be hash functions
+\begin{align*}
+	g : \left\{ 0,1 \right\}^{*} &\rightarrow \left\{ 0,1 \right\}^k\\
+	g': \left\{ 0,1 \right\}^k &\rightarrow \left\{ 0,1 \right\}^k.
+\end{align*}
+The following transformation will be called $QU^{\bot}_{m}$, is due to \cite{HHK} and yields a key encapsulation mechanism with explicit rejection
+\[
+	\mathrm{QKEM}^{\bot}_m = QU^{\bot}_m \left(\Pi_1, g, g'\right) = \left(\mathrm{QGen} = G_1, \mathrm{QEncaps}_m, \mathrm{QDecaps}^{\bot}_m\right).
+\]
+
+The details of $\mathrm{QKEM}^{\bot}_m$ are given here.
+\begin{description}
+	\item[$\mathrm{\mathbf{QGen}}$:] Use $G_1$ to generate a key pair $\left(pk,sk\right)$.
+	\item[Public Key:] $pk$.
+	\item[Private Key:] $sk$.
+	\item[$\mathrm{\mathbf{QEncaps}}_{\boldsymbol{m}}$:] To perform the key encapsulation, let $\vec{m} \in \mathcal{M}$ be any valid message and compute
+		\[
+			\vec{c} = E_1\left(pk, \vec{m}\right).
+		\]
+		Then compute
+		\[
+			\vec{d} = g'\left(\vec{m}\right)
+		\]
+		and
+		\[
+			K = g\left(\vec{m}\right).
+		\]
+		Finally return $\left(K, \vec{c}, \vec{d}\right)$.
+	\item[$\mathrm{\mathbf{QDecaps}}^{\mathbf{\bot}}_{\boldsymbol{m}}$:] Upon receiving $(\vec{c}, \vec{d})$, compute
+		\[
+			\vec{m}' = D_1\left(sk, \vec{c}\right).
+		\]
+		If $\vec{m}'$ is not a valid message or $g'\left(\vec{m}'\right) \neq \vec{d}$ then abort. Otherwise return $K = g\left(\vec{m}'\right)$.
+\end{description}
+
+
+
+\subsection{Implying IND-$\mathbf{CCA2}$ from $\mathbf{OW-PCA}$ With Correctness In The QROM}
+\label{subsec:impCCAFroOWPCAWitCorInTheQROM}
+
+The discussion of security and correctness needs to be changed, when compared to the discussion from \cref{subsec:impCCAFromPCA}. This is partly because the transformation is a bit different but also because it is no longer the random oracle model that is dealt with, but instead the quantum random oracle model. For this I follow \cite{HHK} again (and again it is loosely based upon \cite{TU}).
+
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Games $G_{10}$-$G_{13}$}
+		\label{alg:G10toG13}
+		\begin{algorithmic}
+			\State $b \xleftarrow{\$} \left\{ 0,1 \right\}$ \Comment{$G_{10}$-$G_{12}$}
+			\State $\left(pk,sk\right) \leftarrow G_1$
+			\State $\vec{m} \xleftarrow{\$} \left\{ 0,1 \right\}^k$
+			\State $\vec{c} = E_1\left(pk, \vec{m}\right)$
+			\State $K_0 = g\left(\vec{m}\right)$
+			\State $K_1 \xleftarrow{\$} \left\{ 0,1 \right\}$
+			\State $\vec{d} = g'\left(\vec{m}\right)$ \Comment{$G_{10}$-$G_{12}$}
+			\State $K = K_b$ \Comment{$G_{10}$-$G_{12}$}
+			\State $\vec{d} \xleftarrow{\$} \left\{ 0,1 \right\}^k$ \Comment{$G_{13}$}
+			\State $K \xleftarrow{\$} \left\{ 0,1 \right\}^k$ \Comment{$G_{13}$}
+			\State $b' \leftarrow B^{\mathrm{QDecaps}^{\bot}_m, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$
+			\State \textbf{Return} $\left\llbracket b' = b \right\rrbracket$ \Comment{$G_{10}$-$G_{12}$}
+			\State \textbf{Return} $b'$ \Comment{$G_{13}$}
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{QDecaps}^{\bot}_{m}\left(\left(\vec{c}', \vec{d}'\right) \neq \left(\vec{c}, \vec{d}\right)\right)$ for $G_{10}$-$G_{13}$}
+		\label{alg:QDecapsFromHHKp30}
+		\begin{algorithmic}
+			\If{$\vec{c}' = \vec{c}$} \Comment{$G_{11}$-$G_{13}$}
+				\State \textbf{Return} $\bot$ \Comment{$G_{11}$-$G_{13}$}
+			\EndIf \Comment{$G_{11}$-$G_{13}$}
+			\State $\vec{m}' = D_1\left( sk, \vec{c}' \right)$
+			\If{$\vec{m}' = \vec{m}$} \Comment{$G_{12}$-$G_{13}$}
+				\State \textbf{Abort} \Comment{$G_{12}$-$G_{13}$}
+			\EndIf \Comment{$G_{12}$-$G_{13}$}
+			\If{$\vec{m} \neq \bot \land g'\left( \vec{m}' \right) = \vec{d}'$}
+				\State \textbf{Return} $K' = g\left( \vec{m}' \right)$
+			\Else
+				\State \textbf{Return} $\bot$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Start off by letting $B$ be an adverary against the $\mathrm{CCA}2$ security of $\mathrm{QKEM}^{\bot}_m$. Assume that $B$ issues at most $q_D$ classical queries to $\mathrm{QDecaps}^{\bot}_{m}$, at most $q_g$ queries to $\ket{g}$ and at most $q_{g'}$ queries to $\ket{g'}$. Now consider the games $G_{10}$ to $G_{13}$ given in \cref{alg:G10toG13,alg:QDecapsFromHHKp30}.
+
+$G_{10}$ is just the original $\mathrm{CCA}2$ game, so
+\[
+	Adv_{\mathrm{QKEM}^{\bot}_m}^{\mathrm{CCA}2}\left(B\right) = \abs{P\left( G_{10}^B \Rightarrow 1 \right) - \frac{1}{2} }.
+\]
+
+Now, in game $G_{11}$, $\mathrm{QDecaps}^{\bot}_{m}$ is changed so that it always returns $\bot$ if it is queried on some ciphertext that has the form $\left(\vec{c}, \vec{d}\right)$. Such a query is not allowed in $G_{10}$ or $G_{11}$, so the focus can be limited to the case where $\vec{d}' \neq \vec{d}$. Let $\vec{m}' = D_1\left(sk, \vec{c}\right)$ and if $\vec{m}' = \vec{m}$ and $\vec{d}' \neq \vec{d}$, then $g'\left(\vec{m}'\right) = g'\left(\vec{m}\right) = \vec{d} \neq \vec{d}'$, so $G_{10}$ will also return $\bot$. Now, $G_{11}$ is only different from the game $G_{10}$ if $\vec{m}' \neq \vec{m}$ and so this means that the change from $G_{10}$ to $G_{11}$ is only conceptual, unless $\vec{m}$ will result in a correctness error. This gives
+\[
+	\abs{P\left( G_{11}^B \Rightarrow 1 \right) - P\left( G_{10}^B \Rightarrow1 \right)} \leq \delta_1
+\]
+giving rise to the following result.
+\begin{thm}
+	Let $\Pi_1 = \left(G_1, E_1, D_1\right)$ be a deterministic and rigid public key cryptosystem and let $\mathrm{QKEM}^{\bot}_m = QU^{\bot}_m \left(\Pi_1, g, g'\right)$. If $\Pi_1$ is $\delta_1$-correct, then so is $\mathrm{QKEM}^{\bot}_m$.
+\end{thm}
+
+Having taken care of correctness, do not yet forget the results of $B$ playing games $G_{10}$ and $G_{11}$ as they will still be used going forward. Have a look at $G_{12}$ for instance. Here $\mathrm{QDecaps}^{\bot}_{m}$ is changed slightly again, so as to abort, if it is queried on a ciphertext $\left(\vec{c}, \vec{d}\right)$ with $\vec{c}' \neq \vec{c}$, whilst $D_1\left(sk, \vec{c}'\right) = \vec{m}$. Since $\Pi_1$ is rigid and $D_1\left(sk, \vec{c}'\right) \neq \bot$, it must be true that $\vec{c}' = E_1\left(pk, D_1\left(sk, \vec{c}'\right)\right) = E_1\left(pk, \vec{m}\right) = \vec{c}$. Now the probability that an abort will occur is $0$ and so
+\[
+	P\left( G_{12}^B \Rightarrow 1 \right) = P\left( G_{11}^B \Rightarrow 1 \right).
+\]
+
+Notice here that the line that aborts in $G_{12}$ and $G_{13}$ is only triggered if $\vec{m}' = \vec{m}$, so $\mathrm{QDecaps}^{\bot}_{m}$ cannot trigger a query to $g$ or $g'$ on $\vec{m}$.
+
+As for game $G_{13}$, the tuple $\left(\vec{d}, K\right)$ is picked uniformly at random and there is no longer a check to see if $B$ guessed the right bit at the end of the game. Given that
+\begin{equation*}
+	\begin{aligned}
+		P\left( G_{12}^B \Rightarrow 1 \right) &= \frac{1}{2} \left( P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 1 \right) + P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 0 \right) \right)\\
+			&= \frac{1}{2} \left( P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 1 \right) - P\left( G_{12}^B \Rightarrow 0 \ \middle\vert \ b = 0 \right) \right) + \frac{1}{2},\\
+\alignedintertext{then}
+		\abs{P\left( G_{12}^B \Rightarrow 1 \right) - \frac{1}{2}} &= \frac{1}{2} \abs{P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 1 \right) - P\left( G_{12}^B \Rightarrow 0 \ \middle\vert \ b = 0 \right)}\\
+			& \leq \frac{1}{2} \left( \abs{P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 1 \right) - P\left( G_{13}^B \Rightarrow 1 \right)} + \right.\\
+			& \quad \left. \abs{P\left( G_{12}^B \Rightarrow 0 \ \middle\vert \ b = 0 \right) - P\left( G_{13}^B \Rightarrow 1 \right)} \right).
+	\end{aligned}
+\end{equation*}
+
+Letting $F\left(\vec{m}, \vec{d}\right) = \left(\vec{m}, \vec{d}\right)$ for $b = 1$ and $F\left(\vec{m}, \vec{d}, K\right) = \left(\vec{m}, \vec{d}, K\right)$ for $b = 0$, \cref{lem:AOW2H} can be used to make an upper bound upon the last two terms in the above, so use the notation $\bullet \times \bullet$ to denote the combined oracle, that is a combination of two different oracles.
+
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{D}_0^{\ket{g}, \ket{g'}}$}
+		\label{alg:D0FromHHKp32}
+		\begin{algorithmic}
+			\State $\left(pk, sk\right) \leftarrow G_1$
+			\State $\vec{c} = E_1\left(pk, \vec{m}\right)$
+			\State $b' \leftarrow B^{\mathrm{QDecaps}^{\bot}_{m}, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$
+			\State \textbf{Return} $b'$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{D}_1^{\ket{g}, \ket{g'}} \left(\vec{m}, \vec{d}\right)$}
+		\label{alg:D1FromHHKp32}
+		\begin{algorithmic}
+			\State $\left(pk, sk\right) \leftarrow G_1$
+			\State $\vec{c} = E_1\left(pk, \vec{m}\right)$
+			\State $K \xleftarrow{\$} \left\{ 0,1 \right\}^k$
+			\State $b' \leftarrow B^{\mathrm{QDecaps}^{\bot}_{m}, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$
+			\State \textbf{Return} $b'$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Game $g_0$}
+		\label{alg:gameg0FromHHKp32}
+		\begin{algorithmic}
+			\State $\left(\vec{m}, \vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{2k + m}$
+			\State $i \xleftarrow{\$} \left[ q_{g'} + q_{g} + q_{D} \right]$
+			\State Run $\mathrm{D}_0^{\ket{g \times g'}}\left(\vec{m}, \vec{d}, K\right)$ until the $i$'th query $\ket{\hat{m}}$ to $\ket{g \times g'}$
+			\If{$i >$ number of queries to $\ket{g \times g'}$}
+				\State \textbf{Return} $0$
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{m}} \right)$
+				\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.7\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Game $g_1$}
+		\label{alg:gameg1FromHHKp32}
+		\begin{algorithmic}
+			\State $\left(\vec{m}, \vec{d}\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{k + m}$
+			\State $i \xleftarrow{\$} \left[ q_{g'} + q_D \right]$
+			\State Run $\mathrm{D}_1^{\ket{g}, \ket{g'}}\left(\vec{m}, \vec{d}\right)$ until the $i$'th query $\ket{\hat{\vec{m}}}$ to $\ket{g'}$
+			\If{$i >$ number of queries to $\ket{g'}$}
+				\State \textbf{Return} $0$
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{\vec{m}}} \right)$
+				\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Consider the adversaries $\mathrm{D}_0$ and $\mathrm{D}_1$ from \cref{alg:D0FromHHKp32,alg:D1FromHHKp32} playing the games $g_0$ and $g_1$ from \cref{alg:gameg0FromHHKp32,alg:gameg1FromHHKp32}.
+
+First notice that $\mathrm{D}_1$ will issue at most $q_{g'} + q_D$ queries to $g'$. If run on input $\left(\vec{m}, \vec{d} = g'\left(\vec{m}\right)\right)$ then $\mathrm{D}_1$ will perfectly simulate game $G_{12}$ for the bit $b = 1$. If however $\mathrm{D}_1$ is run on a uniformly random input $\left(\vec{m}, \vec{d}\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{k + m}$, then $\mathrm{D}_1$ perfectly simulates the game $G_{13}$ for bit $b = 1$. This means that
+\begin{equation*}
+\begin{aligned}
+	&\abs{P\left( G_{12}^B \Rightarrow 1 \ \middle\vert \ b = 1 \right) - P\left( G_{13}^B \Rightarrow 1 \right)} =\\
+		& \quad \left\vert P\left( \vec{m} \xleftarrow{\$} \left\{ 0,1 \right\}^k,\ \vec{d} = g'\left(\vec{m}\right),\ b \leftarrow \mathrm{D}_1\left(\vec{m}, \vec{d}\right) \ : b = 1 \right) - \right. \\
+		&\left. \quad P\left( \left(\vec{m}, \vec{d}\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{k + m},\ b \leftarrow \mathrm{D}_1\left(\vec{m}, \vec{d}\right) \ : \ b = 1 \right) \right\vert\\
+		& \qquad\qquad\qquad\qquad\qquad\leq 2 \left(q_{g'} + q_D\right) \cdot \sqrt{P\left( g_1^{\mathrm{D}_1} \Rightarrow 1 \right)}.
+\end{aligned}
+\end{equation*}
+
+Notice here that $\mathrm{D}_0$ will make $q_{g'} + q_g + q_D$ queries to $g' \times g$. If run on input $\left( \vec{m}, \left(\vec{d}, K\right) = g' \times g\left(\vec{m}\right) \right)$ it then perfectly simulates the game $G_{12}$ for bit $b=0$. If it is run on the uniformly random input $\left(\vec{m}, \vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{2k + m}$ instead, it then perfectly simulates the game $G_{13}$. So
+\[
+	\abs{P\left( G_{12}^B \Rightarrow 0 \ \middle\vert \ b = 0 \right) - P\left( G_{13}^B \Rightarrow 1 \right)} \leq 2 \left( q_{g'} + q_g + q_D \right) \cdot \sqrt{P\left( g_0^{\mathrm{D}_0} \Rightarrow 1 \right)}.
+\]
+This just established the bound
+\[
+	\abs{P\left( G_{12}^B \Rightarrow 1 \right) - \frac{1}{2}} \leq \left( q_{g'} + q_D \right) \cdot \sqrt{P\left( g_1^{\mathrm{D}_1} \Rightarrow 1 \right)} + \left( q_{g'} + q_g + q_D \right) \cdot \sqrt{P\left( g_0^{\mathrm{D}_0} \Rightarrow 1 \right)}.
+\]
+
+Knowing that $b \in \left\{ 0,1 \right\}$, one can then say that an upper bound on $P\left( g_b^{\mathrm{D}_b} \Rightarrow 1 \right)$ is needed.
+
+Now let $\mathrm{Roots}\left(\bullet\right)$ be the function that returns the roots of a provided polynomial.
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Games $G_{14,0}$ and $G_{15,0}$}
+		\label{alg:gamesG140andG150}
+		\begin{algorithmic}
+			\State $\left(\vec{m}, \vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{2k + m}$
+			\State $i \xleftarrow{\$} \left[ q_{g'} + q_{g} \right]$
+			\State $\left(pk,sk\right) \leftarrow G_1$
+			\State $\vec{c} = E_1\left(pk, \vec{m}\right)$
+			\State Run $B^{\mathrm{QDecaps}^{\bot}_m, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$ until the $i$'th query $\ket{\hat{\vec{m}}}$ to $\ket{g \times g'}$
+			\If{$i >$ number of queries to $\ket{g \times g'}$}
+				\State \textbf{Return} $0$
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{\vec{m}}} \right)$
+				\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Games $G_{14,1}$ and $G_{15,1}$}
+		\label{alg:gamesG141andG151}
+		\begin{algorithmic}
+			\State $\left(\vec{m}, \vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{2k + m}$
+			\State $i \xleftarrow{\$} \left[ q_{g'} \right]$
+			\State $\left(pk, sk\right) \leftarrow G_1$
+			\State $\vec{c} = E_1\left(pk, \vec{m}\right)$
+			\State Run $B^{\mathrm{QDecaps}^{\bot}_m, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$ until the $i$'th query $\ket{\hat{\vec{m}}}$ to $\ket{g'}$
+			\If{$i >$ number of queries to $\ket{g'}$}
+				\State \textbf{Return} $0$
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{\vec{m}}} \right)$
+				\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{QDecaps}^{\bot}_m \left(\left(\vec{c}', \vec{d}'\right) \neq \left(\vec{c}, \vec{d}\right)\right)$ for $G_{14,b}$}
+		\label{alg:QDecapsForG14b}
+		\begin{algorithmic}
+			\If{$\vec{c}' = \vec{c}$}
+				\State \textbf{Return} $\bot$
+			\EndIf
+			\State $\vec{m}' = D_1\left( sk, \vec{c}' \right)$
+			\If{$\vec{m}' = \vec{m}$}
+				\State \textbf{Abort}
+			\EndIf
+			\If{$\vec{m}' \neq \bot \land g'\left( \vec{m}' \right) = \vec{d}'$}
+				\State \textbf{Return} $K' = g\left( \vec{m}' \right)$
+			\Else
+				\State \textbf{Return} $\bot$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{QDecaps}^{\bot}_m \left(\left(\vec{c}', \vec{d}'\right) \neq \left(\vec{c}, \vec{d}\right)\right)$ for $G_{15,b}$}
+		\label{alg:QDecapsForG15b}
+		\begin{algorithmic}
+			\If{$\vec{c}' = \vec{c}$}
+				\State \textbf{Return} $\bot$
+			\EndIf
+			\State $\vec{m}' = D_1\left(sk, \vec{c'}\right)$
+			\If{$\vec{m}' = \vec{m}$}
+				\State \textbf{Abort}
+			\EndIf
+			\If{$\exists\vec{m}'' \in \mathrm{Roots}\left( g'\left(X\right) - \vec{d}' \right) \ : \ D_1\left(sk, \vec{c}\right) = \vec{m}''$}
+				\State \textbf{Return} $K' = g\left( \vec{m}'' \right)$
+			\Else
+				\State \textbf{Return} $\bot$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Consider games $G_{14,b}$ and $G_{15,b}$ from \cref{alg:gamesG140andG150,alg:gamesG141andG151,alg:QDecapsForG14b,alg:QDecapsForG15b}. These will be used to establish the desired bound upon $P\left( g_b^{\mathrm{D}_b} \Rightarrow 1 \right)$.
+
+The games $G_{14,b}$ are just reformulations of the games $g_b$ that no longer uses the helper adversaries $\mathrm{D}_b$. In $g_b$ a query to $g' \times g$ $\left(\text{or }g'\right)$ is picked uniformly at random amongst the queries that $\mathrm{D}_b$ issues -- including all of the queries that arise implicitly from $B$ when querying $\mathrm{QDecaps}^{\bot}_m$. Instead $G_{14,b}$ excludes the implicit queries and only picks an explicit query that $B$ issued directly to $g' \times g$ $\left(\text{or }g'\right)$ uniformly at random.
+
+Notice that $\mathrm{D}_b$ will reject queries to $\mathrm{QDecaps}^{\bot}_m$ of the form $\left(\vec{c}, \vec{d}\right)$ and aborts if $\mathrm{QDecaps}^{\bot}_m$ is queried on a ciphertext $\left(\vec{c}', \vec{d}'\right)$ such that $D_1\left(sk, \vec{c}'\right) = \vec{m}$. This means that no query to $\mathrm{QDecaps}^{\bot}_m$ can trigger a query to $g' \times g$ $\left(\text{or }g'\right)$ on $\vec{m}$, so $\mathrm{D}_b$ will lose the games $g_b$ if the games randomly pick one of the queries that were triggered by $B$'s queries to $\mathrm{QDecaps}^{\bot}_m$. This gives
+\[
+	P\left( g^{\mathrm{D}_b}_b \Rightarrow 1 \right) \leq P\left( G^B_{14,b} \Rightarrow 1 \right).
+\]
+
+Since $g' = g\left(X\right)$ is a random polynomial of degree $2q_{g'}$ over $\F_{2^k}$, then if $\left(\vec{c}', \vec{d}'\right)$ is a valid encapsulation, $\vec{m}'$ will be a root of $g'\left(X\right) - \vec{d}'$. $G_{14,b}$ and $G_{15,b}$ should return the same outputs for every query $\left(\vec{c}', \vec{d}'\right) \neq \left(\vec{c}, \vec{d}\right)$. Clearly the case where $\vec{c}' = \vec{c}$ will result in $\bot$ in all four games. All of the games also abort if $\vec{m}' = D_1\left(sk, \vec{c}'\right) = \vec{m}$. So the focus can be limited to the cases where $\vec{c}' \neq \vec{c}$ and $\vec{m}' = D_1\left(sk, \vec{c}'\right) \neq \vec{m}$. This leaves two cases.
+
+\begin{enumerate}
+	\item In the first case $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$ will return $\bot$ in $G_{15,b}$. This means that $\vec{m}'$ is not a root of $g'\left(X\right) - \vec{d}'$. Now this case can only occur if and only if $g'\left(\vec{m}'\right) \neq \vec{d}'$ or $\vec{m}' = \bot$. In this case the condition in the last \texttt{if}-statement of $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$ in $G_{14,b}$ will return \texttt{false} and $G_{14,b}$ will return $\bot$ just as in $G_{15,b}$.
+	\item In the second case, $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$ will not return $\bot$ in $G_{15,b}$, so $\vec{m}'$ is a root of $g'\left(X\right) - \vec{d}'$ and $D_1\left(sk, \vec{c}'\right) = \vec{m}'$. This also means that $g'\left(\vec{m}'\right) = \vec{d}'$ and so $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$ will return $K' = g\left(\vec{m}'\right)$ in $G_{15,b}$. In this case the condition in the last \texttt{if}-statement in $G_{14,b}$ will return \texttt{true} and so $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$ also return $K' = g\left(\vec{m}'\right)$ in $G_{14,b}$.
+\end{enumerate}
+
+Combining the above two cases should make it clear that $\mathrm{QDecaps}^{\bot}_m$ is equivalent in the two games. This means that
+\[
+	P\left( G_{15,b}^B \Rightarrow 1 \right) = P\left( G_{14,b}^B \right).
+\]
+
+Let $\mathrm{PCO}$ be a plaintext checking oracle as has been seen before in the last chapter.
+
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$A_0^{\mathrm{PCO}}\left(pk, \vec{c}\right)$}
+		\label{alg:A0FromHHKp33}
+		\begin{algorithmic}
+			\State $\left(\vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{k + m}$
+			\State $i \xleftarrow{\$} \left[ q_g + q_{g'} \right]$
+			\State Run $B^{\mathrm{QDecaps}^{\bot}_m, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$ until the $i$'th query $\ket{\hat{\vec{m}}}$ to $\ket{g \times g'}$
+			\If{$i >$ number of queries to $\ket{g \times g'}$}
+				\State \textbf{Return} 0
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{\vec{m}}} \right)$
+				\State \textbf{Return} $\vec{m}'$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$A_1^{\mathrm{PCO}}\left(pk, \vec{c}\right)$}
+		\label{alg:A1FromHHKp33}
+		\begin{algorithmic}
+			\State $\left(\vec{d}, K\right) \xleftarrow{\$} \left\{ 0,1 \right\}^{k + m}$
+			\State $i \xleftarrow{\$} \left[ q_{g'} \right]$
+			\State Run $B^{\mathrm{QDecaps}^{\bot}_m, \ket{g}, \ket{g'}}\left(pk, \left(\vec{c}, \vec{d}\right), K\right)$ until the $i$'th query $\ket{\hat{\vec{m}}}$ to $\ket{g'}$.
+			\If{$i >$ number of queries to $\ket{g'}$}
+				\State \textbf{Return} $\bot$
+			\Else
+				\State $\vec{m}' \leftarrow \mathrm{Measure}\left( \ket{\hat{\vec{m}}} \right)$
+				\State \textbf{Return} $\vec{m}'$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.9\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{QDecaps}^{\bot}_m\left(\left(\vec{c}', \vec{d}'\right) \neq \left(\vec{c}, \vec{d}\right)\right)$ for $A_0$ and $A_1$}
+		\label{alg:QDecapsForA0andA1FromHHKp33}
+		\begin{algorithmic}
+			\If{$\vec{c}' = \vec{c}$}
+				\State \textbf{Return} $\bot$
+			\EndIf
+			\If{$\exists \vec{m}' \in \mathrm{Roots}\left( g'\left(X\right) - \vec{d}' \right) \ : \ \mathrm{PCO}\left( \vec{m}', \vec{c}' \right) = 1$}
+				\State \textbf{Return} $K' = g\left( \vec{m}' \right)$
+			\Else
+				\State \textbf{Return} $\bot$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Again let $b \in \left\{ 0,1 \right\}$ and consider adversaries $A_b$ from \cref{alg:A0FromHHKp33,alg:A1FromHHKp33,alg:QDecapsForA0andA1FromHHKp33}. $A_b$ is an adversary against the $\mathrm{OW-PCA}$ security of $\Pi_1$ that simulates $G_{15,b}$ for $B$.
+
+Now $G_{15,b}^B \Rightarrow 1$ implies that no query $D_1\left( sk, \vec{c}' \right) = \vec{m}$ is ever done in $G_{15,b}^B$ and so even though $A_b$ does not check whether or not $D_1\left( sk, \vec{c}' \right) = \vec{m}$ in their simulation of $\mathrm{QDecaps}^{\bot}_m\left(\vec{c}', \vec{d}'\right)$, $B$'s view is not changed. This also means that
+\[
+	P\left( G_{15,b}^B \Rightarrow 1 \right) = Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(A_b\right).
+\]
+Notice that each time $B$ makes a query to $\mathrm{QDecaps}^{\bot}_m$ on $\left(\vec{c}' \neq \vec{c}, \vec{d}'\right)$, $A_b$ computes the set $\mathrm{Roots}\left( g'\left(X\right) - \vec{d}' \right)$ of complex roots. Using the fundamental theorem of algebra it can be seen that this set has $2 q_{g'} - 1$ elements because $g'\left(X\right) - \vec{d}'$ is a polynomial of degree $2 q_{g'} - 1$. In the worst case scenario they will need to check every element $\vec{m}' \in \mathrm{Roots}\left( g'\left(X\right) - \vec{d}' \right)$ to see if $\mathrm{PCO}\left( \vec{m}', \vec{c}' \right) = 1$.
+
+Now folding $A_0$ and $A_1$ into a single $\mathrm{OW-PCA}$ adversary $A$ and collecting all the probabilities deduced from the games of this sections together yields
+\begin{equation}
+\label{eq:boundForBInTheQROM}
+	Adv_{\mathrm{QKEM}^{\bot}_m}^{\mathrm{CCA}2}\left(B\right) \leq \left( 2 q_{g'} + q_g + 2 q_D \right) \sqrt{Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(A\right)} + \delta_1.
+\end{equation}
+Provided that the running time of $A$ is about that of $B$, this proves the following.
+\begin{thm}
+\label{thm:QROMTrans}
+	Let $\Pi_1$ be a public key cryptosystem that is $\mathrm{OW-PCA}$, $g$ and $g'$ be hash functions and let $\mathrm{QKEM}^{\bot}_m = QU^{\bot}_m \left( \Pi_1, g, g' \right)$ be a key encapsulation mechanism. Then $\mathrm{QKEM}^{\bot}_m$ is \emph{IND-}$\mathrm{CCA}2$ in the quantum random oracle model.
+\end{thm}
+
+
+
+\subsection{Implicit Rejection In The QROM}
+
+One can also do implicit rejection in the QROM just as in \cref{sec:theSecMod}. The key generation algorithm again appends a uniformly random string $\vec{s}$ to the secret key and when decapsulation is performed, this is again used to make the alternative key that signifies a rejection:
+\[
+	K = g\left( \vec{s}, \vec{c}, \vec{d} \right).
+\]
+Other than that the rest is just as in \cref{sec:aNewSecTra}.
+
+This is also a way to achieve a key exchange mechanism that is IND-$\mathrm{CCA}2$. The security reduction follows the same discussion that is in \cref{subsec:impCCAFroOWPCAWitCorInTheQROM} with some minor differences. In this case $\mathrm{QDecaps}^{\bot}_m$ will be changed to a $\mathrm{QDecaps}^{\not\bot}_m$ that always knows if $\left( \vec{c}, \vec{d} \right)$ is valid or not and the rejection $\bot$ will be changed to $g\left( \vec{s}, \vec{c}, \vec{d} \right)$. The rest of the proof is the same \cite{HHK}.
+
+
+
+\section{The Final CCA2 Secure Key Encapsulation Mechanism In The QROM}
+\label{sec:theFinCCASecKeyEncMecInTheQRO}
+
+This section really emphasises why the McEliece PKC is so interesting. Remember how in \cref{sec:traOrgMcEPKC} I argued that the McEliece PKC is $\mathrm{OW-CPA}$. Well again letting the original McEliece PKC be denoted $\mathrm{MCE}$, then \cref{thm:TInTheQROM,thm:QROMTrans} taken together shows that
+\begin{align*}
+	\mathrm{QKEM}^{\bot}_m &= \mathrm{QFO}^{\bot}_m = QU^{\bot}_m \left( T\left( \mathrm{MCE}, h \right), g, g' \right)\\
+		&= \left( \mathrm{QGEN} = G_1, \mathrm{QEncaps}_m, \mathrm{QDecaps}^{\bot}_m \right)
+\end{align*}
+is a key encapsulation mechanism that is IND-$\mathrm{CCA}2$. Well almost. The real world differs from the world of random oracles, so this is technically just a conjecture. But it is a well-founded one. Let me discuss this a bit further before showing how to build the converted $\mathrm{MCE}$.
+
+
+
+\subsection{The Hash Functions}
+
+As for the $T$-transformation, the hash function from \cite{BP} can still be used for the same reasons as in \cref{subsec:TheHashFunctionsInChap5}. What is then needed is a discussion of the original McEliece PKC in the quantum random oracle mode. I will come back to this in a bit.
+
+As for $QU^{\bot}_m$ the hash functions used need to be collision intractable (again due to \cref{thm:collIntrMeansOneWay}). One of them needs to take input of an arbitrary length and the other needs to take input of length $k$ (with $k$ being defined as in the original McEliece PKC). There are luckily some well-known cryptographic hash functions that can be used for the arbitrary case that have not yet been broken by quantum computers. As for the case, where the input needs to be of length $k$, one could still use a hash function that takes an arbitrary input, since it will then also take input of length $k$ (being consistent with \cref{def:hashFunctions}). This solves all pertaining issues as to which hash functions are to be used.
+
+
+
+\subsection{Applying The Transformations}
+\label{subsec:AppTheTransInTheQROM}
+
+Having taken care of the hash functions that are to be used, I will lay out here, how the converted McEliece PKC looks after applying the $T$-transformation and then the $QU^{\bot}_m$-transformation.
+
+\begin{description}
+	\item[System Parameters:] $n,t \in \N$ where $t \leq \left\lfloor \frac{n-1}{2} \right\rfloor$.
+	\item[Key Generation:] Given the parameters $n$, $t$ generate the following matrices:
+		\\~\\
+		$G$: $k \times n$ generator matrix of an irreducible binary $\left[n,k\right]$ Goppa code $\mathcal{G}$ which can correct up to $t$ errors.\\
+		$\mathrm{S}$: $k \times k$ random binary non-singular matrix.\\
+		$\mathrm{P}$: $n \times n$ random permutation matrix.
+		\\~\\
+		Then compute the $k \times n$ matrix $G' = \mathrm{S}G\mathrm{P}$,\\
+		build a hashing algorithm $h$ that outputs bit strings of length $n$ and (Hamming) weight $t$ (see e.g. \cite{BP}),\\
+		choose a collision intractable hash function $g$ that takes input of arbitrary length and gives an output of length $k$ and\\
+		choose a collision intractable hash function $g'$ that takes input of length $k$ and gives output of length $k$.
+	\item[Public Key:] $\left(G', t, h, g, g'\right)$.
+	\item[Private Key:] $\left(S, D_{\mathcal{G}}, P\right)$ where $D_{\mathcal{G}}$ is an efficient decoding algorithm for $\mathcal{G}$ (see e.g. \cref{alg:errCorrIrrBinGoppa}).
+	\item[Encapsulation:] Start by encrypting the message $\vec{m} \in \left\{ 0,1 \right\}^k$. This is done by computing $h\left(\vec{m}\right) = \vec{z} \in \left\{ 0,1 \right\}^n$ and then computing the ciphertext
+		\[
+			\vec{c} = \vec{m} G' \xor \vec{z}.
+		\]
+		Then compute
+		\[
+			\vec{d} = g'\left(\vec{m}\right)
+		\]
+		and the key
+		\[
+			K = g\left(\vec{m}\right).
+		\]
+	\item[Decapsulation:] Upon receiving $\left(\vec{c}, \vec{d}\right)$, start off by decrypting $\vec{c}$. This is done by calculating
+		\[
+			\vec{c}\mathrm{P}^{-1} = \vec{m}'\mathrm{S}G \xor \vec{z}\mathrm{P}^{-1}.
+		\]
+		Then apply the decoding algorithm $D_{\mathcal{G}}$ to this. Because $\vec{c}\mathrm{P}^{-1}$ should have a hamming distance of $t$ to the Goppa code, the codeword obtained should be
+		\[
+			\vec{m}'\mathrm{S}G = D_{\mathcal{G}} \left( \vec{c}\mathrm{P}^{-1} \right).
+		\]
+		Now one can now compute the plaintext $\vec{m}'$ as
+		\[
+			\vec{m}' = \left( \vec{m}'\mathrm{S}G \right)  G^{-1} \mathrm{S}^{-1}.
+		\]
+		Then compute
+		\[
+			\vec{c}' = \vec{m}' G' \xor h\left(\vec{m}'\right).
+		\]
+		If $\vec{m}'$ is not a valid plaintext or if $\vec{c}' \neq \vec{c}$, then decryption has failed and the procedure should abort.\\
+		If decryption succeeds however, then compute
+		\[
+			\vec{d}' = g'\left( \vec{m}' \right)
+		\]
+		and see if $\vec{d}' = \vec{d}$. If this is not the case, then abort. Otherwise return $K = g\left( \vec{m}' \right)$.
+\end{description}
+
+
+
+\subsection{Security After Applying The Transformations}
+
+Suppose the original McEliece PKC could be broken. Then an adversary could find $\vec{m}$ from $\vec{c}$ and imitate a legitimate party in a key exchange protocol or get to know the key that two legitimate parties wish to use for their symmetric encryption scheme. Obviously this would pose a problem. However, there are as of yet not any published classical- or quantum attacks on the original McEliece PKC that breaks the one-wayness of the original proposal of McEliece.
+
+Now let $q_{\mathrm{RO}} = q_h + q_g + q_{g'}$ denote the total number of queries that the $\mathrm{CCA}2$ adversary $B$ implicitly or explicitly sends to the quantum random oracles $h$, $g$ and $g'$. Combining \cref{eq:boundForTInTheQROM} and \cref{eq:boundForBInTheQROM} then gives
+\[
+	Adv_{\mathrm{QKEM}^{\bot}_m}^{\mathrm{CCA}2}\left(B\right) \leq 8 q_{\mathrm{RO}} \left( \sqrt{q_{\mathrm{RO}}^2 \cdot \delta + q_{\mathrm{RO}} \cdot \sqrt{Adv_{\mathrm{MCE}}^{\mathrm{OW-CPA}} \left(A\right)}} + q_{\mathrm{RO}} \cdot \delta \right)
+\]
+and just like in \cref{subsec:SecAftAppBotTraInSuc} it is then entirely possible to achieve ``$\kappa$ bits of security'' just as in the original McEliece PKC.
+

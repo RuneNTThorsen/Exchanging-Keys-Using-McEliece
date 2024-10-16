@@ -1,0 +1,209 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 1: Linear Error Correcting Codes
+%% ============================================================================
+
+\chapter{Linear Error Correcting Codes}
+\label{chap:lecc}
+
+This chapter is built in just about the same way as chapter 3 in \cite{vanlint} (which is then also the source for the entire chapter). There is an exception to this however. This chapter excludes everything after section 3.2 in \cite{vanlint}. This is because I will limit my focus to just introducing linear error correcting codes, since this is what is needed in order to understand \cref{chap:goppa}.
+
+In \cref{sec:whyecc} I will quickly introduce why error correcting codes are of desire, besides being useful for understanding Goppa codes. This is followed by \cref{sec:blockcodes} where I will introduce the notion of block codes and some important definitions in relation to them. Later in \cref{sec:lc} I will use what has already been introduced along with some more definitions to fully define what a linear error correcting code is. All of these introductions will also lead to an important result regarding a special property of linear error correcting codes.
+
+
+
+\section{Why Error Correcting Codes?}
+\label{sec:whyecc}
+Suppose a message is sent over a \emph{noisy channel}. This noisy channel will have a non-zero probability of introducing errors at every position in the received message. For instance one might have a bit-flip in a particular bit in said message. This is the problem that error correcting codes tries to solve. All such errors are assumed to be independent though. That is for a message of length $q$ it is assumed that an error that has been introduced in position $i$ in such a received message has no influence on the remaining $q-1$ symbols of the message. The remaining symbols of the message will thus still have a probability of an error with equal probability (that is to say that any and all symbols in a message sent over a noisy channel will have a uniform probability of having an error introduced).
+
+
+
+\section{Block Codes}
+\label{sec:blockcodes}
+Throughout this chapter it will be assumed that information is coded using some arbitrary alphabet $\mathcal{Q}$ with $q$ distinct symbols. By introducing the notation that $\size{\bullet}$ denotes the function that takes a set as an argument and returns the amount of distinct elements in the set, it must then be true that $\size{\mathcal{Q}} = q$.
+
+Suppose you have blocks of $n$ symbols that can all be decoded independently. Call $n$ the \emph{block length} or \emph{word length} (or even just \emph{length}) and call the blocks \emph{codewords}. A code that can decode these blocks independently will be called a \emph{block code}. Now codewords of this form will have the general notation $\vec{x} \in \mathcal{Q}^n$ meaning that $\vec{x} = \left(x_1, x_2, \cdots , x_n\right)$ is a codeword of length $n$ but is at the same time to be considered as a vector with entries corresponding to the symbols in the given word.
+
+In order to further investigate some interesting properties of block codes, some more notation is needed. Let the vector $\left(0, 0, \cdots , 0\right)$ be denoted by $\vec{0}$. This new notation helps us introduce our first set of definitions, that of the Hamming distance and of the Hamming weight.
+\begin{defi}[Hamming Distance And Hamming Weight]
+\label{def:hamdhamw}
+	Let $\vec{x}, \vec{y} \in \mathcal{Q}^n$ then the \emph{distance} (or \emph{Hamming distance}) $d\left(\vec{x},\vec{y}\right)$ of $\vec{x}$ and $\vec{y}$ is defined as
+	\[		
+		d\left(\vec{x},\vec{y}\right) = \size{\left\{ i \ \middle\vert \ 1 \leq i \leq n, \ x_1 \neq y_i \right\}}.
+	\]
+	Now the \emph{weight} (or \emph{Hamming weight}) $w\left(\vec{x}\right)$ of $\vec{x}$ can be defined in terms of the distance function:
+	\begin{equation*}
+		w\left(\vec{x}\right) = d\left(\vec{x}, \vec{0}\right).
+	\end{equation*}
+\end{defi}
+
+It is not hard to see that the hamming distance is a metric on $\mathcal{Q}^n$. Already now the relevance of this metric can be seen from what I started this chapter out with: if a message is sent over a noisy channel, then the Hamming distance can be used to measure how many errors are in a received message over said channel (provided one has access to both the original and the received message of course).
+
+Now let $C$ be a \emph{code} that is a nonempty proper subset of the alphabet $\mathcal{Q}''$, in a more mathematical notation one would then write $\emptyset \neq C \subset \mathcal{Q}n$. In the case that $\size{C} = 1$ the code is \emph{trivial}. If $q = 2$ then the code is called \emph{binary}, if $q = 3$ then the code is \emph{ternary}, etc. Now I am ready to move on a bit further again. Time for some more definitions. This first one should be intuitive enough.
+
+\begin{defi}[Minimum Distance And Minimum Weight]
+\label{def:minDistminW}
+	The \emph{minimum distance} of a nontrivial code $C$ is
+	\[
+		\min \left\{ d\left(\vec{x}, \vec{y}\right) \ \middle\vert \ \vec{x} \in C, \ \vec{y} \in C, \ \vec{x} \neq \vec{y} \right\}.
+	\]
+	The \emph{minimum weight} of $C$ is
+	\begin{equation*}
+		\min \left\{ w\left(\vec{x}\right) \ \middle\vert \ \vec{x} \in C, \ \vec{x} \neq \vec{0} \right\}.
+	\end{equation*}
+\end{defi}
+
+This next definition is rather interesting though and at first glance it might not be clear what it actually is that is being defined.
+\begin{defi}[Information Rate]
+\label{def:infRate}
+	If $\size{\mathcal{Q}} = q$ and $C \subset \mathcal{Q}''$ then
+	\[
+		R = n^{-1} \log_{q} \size{C}
+	\]
+	is called the \emph{information rate} of $C$.
+\end{defi}
+\Cref{def:infRate} is worth having a short look at. The information rate that is being defined is essentially just a measure of how much of a message is not redundant. That is it is a fraction that represents how much of a given received message is useful information with the remainder of the message being used to do error correction.
+
+Remember that in \cref{def:hamdhamw} there is a clear definition of something called the Hamming distance. It might differ somewhat from what everyone is used to think of as a distance, but if one accepts that it is indeed a distance, then one can also use it to define other things that can be defined from such a measurement. One of them is a radius.
+\begin{defi}[Covering Radius]
+\label{def:covRad}
+	If $C \subset \mathcal{Q}^n$ then the \emph{covering radius} $\rho \left(C\right)$ of $C$ is
+	\begin{equation*}
+		\max \left\{ \min \left\{ d\left(\vec{x},\vec{c}\right) \ \middle\vert \ \vec{c} \in C \right\} \ \middle\vert \ \vec{x} \in \mathbb{Q}^n \right\}.
+	\end{equation*}
+\end{defi}
+
+Now let $\rho$ be a radius of a sphere $B_{\rho}\left(\vec{x}\right)$ with center $\vec{x}$. The sphere can be described as the set
+\[	
+	\left\{ \vec{y} \in \mathcal{Q}^n \ \middle\vert \ d\left(\vec{x},\vec{y}\right) \leq \rho \right\}.
+\]
+It is even possible to define a set of such spheres as $\left\{ B_{\rho} \left(\vec{c}\right) \ \middle\vert \ \vec{c} \in C \right\}$. Imagine if you will that $\rho$ is the largest integer radius such that the spheres are disjoint. Now it must be true that either $d = 2 \rho + 1$ or $d = 2 \rho + 2$. To see this consider two spheres that expand equally much from their respective centres until they are adjacent. Now since they must not overlap either they just exactly do not (leading to the case where $d = 2 \rho + 1$) or they start overlapping and must both contract $1$ unit length (leading to the case where $d = 2 \rho + 2$).
+
+Now the covering radius is the smallest $\rho$ such that that the spheres in the set $\left\{ B_{\rho} \left(\vec{c}\right) \ \middle\vert \ \vec{c} \in C \right\}$ cover all of $\mathcal{Q}^n$. If $\rho \left(C\right) = \rho$ then the code $C$ is said to be \emph{perfect}. This leads to \cref{def:perfCode}.
+\begin{defi}[Perfect Code]
+\label{def:perfCode}
+	A code $C \subset \mathcal{Q}^n$ with minimum distance $2e + 1$ is called a \emph{perfect code} if every $\vec{x} \in \mathcal{Q}^n$ has distance $\leq e$ to exactly one codeword.
+\end{defi}
+\Cref{def:perfCode} actually just implies that any perfect error correcting block code can correct up to $e$ errors introduced by a noisy channel. Call such a code $C$ that can correct up to $e$ errors an \emph{$e$-error-correcting code} and if it is also perfect, then call it a \emph{perfect $e$-error-correcting code}.
+
+ Now denote by $\binom{\bullet}{\bullet}$ the binomial coefficient. The following result comes from combinatorics.
+\begin{cor}[Sphere-Packing Condition]
+\label{cor:spherePacking}
+	If $C \subset \mathcal{Q}^n$ is a perfect $e$-error correcting code then
+	\begin{equation*}
+		\size{C} \sum_{i=0}^{e} \binom{n}{i} \left(q - 1\right)^i = q^n.
+	\end{equation*}
+\end{cor}
+\Cref{cor:spherePacking} basically just implies that it takes $q^n$ spheres to cover all of $\mathcal{Q}^n$. This means that there must be $q^n$ different block codes on the alphabet $Q^n$ that can correct up to $e$ errors.
+
+Note that a trivial code will be trivially perfect. This is because the distance between an element and itself is $0$.
+
+
+
+\section{Linear Codes}
+\label{sec:lc}
+
+Linear error correcting codes are essentially a special case of block codes. I will try to define what a linear code actually is, but doing so is not as easy as it was for block codes. That is because it is now required that the code in question needs to have some actual algebraic structure and not be treated as a general case, as block codes were. Fortunately this is entirely possible to do.
+
+First have a group $\mathcal{Q}$ and a subgroup $C$ of $\mathcal{Q}^n$ as a code. This is called a \emph{group code}. Actually $\mathcal{Q}$ is the field $\F_{q}$ where $q = p^r$ with $p$ being a prime number. As before we will now again have that $\mathcal{Q}^n$ is an $n$-dimensional vector space, equal to $\F^{n}_{q}$. Now I am already prepared to define what is meant by a linear code.
+\begin{defi}[Linear Code]
+\label{def:linCode}
+	A \emph{$q$-ary linear code} $C$ is a linear subspace of $\F_{q}^{n}$. if $C$ has dimension $k$ then it is called an $\left[n,k\right]$ code.
+\end{defi}
+Now such codes that also has minimum distance $d$ will be called $\left[n,k,d\right]$-codes, so this notation means that an $\left[n,k,d\right]$-code will be a $k$-dimensional linear code of length $n$ with minimum distance $d$. Linear codes also have something called a generator matrix, the definition of which is below.
+\begin{defi}[Generator Matrix]
+\label{def:genMatLinCode}
+	A \emph{generator matrix $G$} for a linear code $C$ is a $k$ by $n$ matrix in which the rows are a basis of $C$.
+\end{defi}
+Another way to say the same thing is to say that $G$ is a $k \times n$ matrix for which it holds that $C$ is spanned by its rows or that $C$ is simply equal to its row space. That is to say that if $G$ is a generator matrix for $C$ then $C = \left\{ \vec{a}G \ \middle\vert \ \vec{a} \in \mathcal{Q}^k \right\}$. Let $I_k$ denote the $k$ by $k$ identity matrix, then when $G = \begin{pmatrix}
+I_k & P
+\end{pmatrix}$ it is said to be in \emph{standard form} or \emph{reduced echelon form}. Whenever $G$ is in standard form then the first $k$ symbols of a codeword are called \emph{information symbols}. As the name implies these symbols carry information and the remaining symbols will then serve as \emph{parity check symbols} and are determined by the information symbols. This of course means that the code has $n-k$ parity check symbols. This gives an information rate of $\frac{k}{n}$, since $k$ out of $n$ symbols actually carry information.
+
+Suppose you have two codes $C_1$ and $C_2$. If there exists a fixed permutation that when applied to all the codewords of $C_1$ gives $C_2$, then the two codes are equally good. Such two codes are called \emph{equivalent}. Sometimes this notion of equivalence is extended to also include a permutation on the symbols of $\mathcal{Q}$. Since Gauss-Jordan elimination is a thing, it is a well known fact from linear algebra that any code will be equivalent to another code that has a generator matrix in standard form.
+
+Now, one should be able to easily separate the information symbols and the redundant symbols. Such codes that have this property are called \emph{separable}. In general if a code $C$ has $k$ information symbols and if $\size{C} = q^k$ and there is exactly one codeword for every possible choice of entries in the $k$ symbols then the code is said to be \emph{systematic} on $k$ positions. So an $\left[n,k\right]$ code is systematic on at least one $k$-tuple of positions.
+
+Since linear codes are just a special case of block codes, a linear code $C$ has minimum distance $d = 2e + 1$, so it is able to correct up to $e$ errors in a received word. If however $d=2e$ then an error pattern of weight $e$ will always be detected. Then in the more general case one can say that, if $C$ has $M$ words, then one must check a total of $\binom{M}{2}$ pairs of codewords in order to find $d$. The following result shows that the work is a bit easier for linear codes.
+\begin{thm}
+	For a linear code $C$ the minimum distance is equal to the minimum weight.
+	\begin{Proof}
+		\begin{align*}
+			\intertext{For a linear code it holds that}
+			d\left(\vec{x},\vec{y}\right) &= d\left(\vec{x} - \vec{y}, \vec{0}\right)\\
+				&= w\left(\vec{x} - \vec{y}\right)
+			\intertext{and if}
+				x &\in C,\\
+				y &\in C
+			\intertext{then}
+				\vec{x} - \vec{y} &\in C.
+		\end{align*}
+	\end{Proof}
+\end{thm}
+
+Let $\langle \bullet , \bullet \rangle$ denote the inner product between two vectors and then the definition of a so-called dual code can be introduced.
+\begin{defi}[Dual Code]
+\label{def:dualCode}
+	If $C$ is an $\left[n,k\right]$ code then the \emph{dual code $C^{\bot}$} is defined as
+	\begin{equation*}
+		C^{\bot} = \left\{ \vec{y} \in \F_{q}^{n} \ \middle\vert \ \forall x \in C \ \text{then } \langle \vec{x}, \vec{y} \rangle = 0 \right\}.
+	\end{equation*}
+\end{defi}
+This dual code $C^{\bot}$ is also in and of itself a linear code, just as our $C$ is --- it is an $\left[n, n-k\right]$ code. One might easily think that it is an orthogonal complement to $C$, but this is not the case. Since the codes are defined over a finite field $\mathcal{Q}$, the subspaces of $C$ and $C^{\bot}$ could have an intersection larger than $\left\{ \vec{0} \right\}$ and they could also be equal to each other. In the case that $C = C^{\bot}$ then $C$ is called a \emph{self-dual} code.
+
+Let $\bullet^{T}$ denote the transpose of a matrix and let $G = \begin{pmatrix}
+I_k & P
+\end{pmatrix}$ be the generator matrix for $C$ in the standard form once again, then $H = \begin{pmatrix}
+-P^T & I_{n-k}
+\end{pmatrix}$ is the generator matrix for the dual code $C^{\bot}$. This is because $H$ is of just the right size and rank and has the right entries to fulfill that $G^{-1} = H^T$ which gives that $G H^T = 0$, which is all that is required. This also means that every codeword $\vec{a}G$ has inner product $0$ with every row of $H$. Put in another way:
+\begin{equation}
+\label{eq:propOfParMat}
+\vec{x} \in C \Leftrightarrow \vec{x} H^T = 0.
+\end{equation}
+All of the $n-k$ linear equations in \cref{eq:propOfParMat} must be satisfied by all possible codewords in $C$.
+
+If $\vec{y} \in C^{\bot}$ then the equation $\langle \vec{x}, \vec{y} \rangle = 0$ (which should hold for every $\vec{x} \in C$) found in \cref{def:dualCode} is called a \emph{parity check (equation)}. $H$ is then called the \emph{parity check matrix} of $C$. It should be clear now, that the code generated by $H$ is the dual code of $C$, which also becomes apparent after noting that $H^T$ is the right kernel of $C$.
+
+\begin{defi}[Syndrome Of A Linear Code]
+\label{def:syndrome}
+	If $C$ is a linear code with parity check matrix $H$ then for every $\vec{x} \in \mathcal{Q}^n$, $\vec{x} H^T$ is called the \emph{syndrome} of $\vec{x}$.
+\end{defi}
+
+Please note that the covering radius $\rho \left(C\right)$ of an $\left[n,k\right]$ code (see \cref{def:covRad}) is the smallest integer such that any (column-)vector in $\mathcal{Q}^{n-k}$ can be written as the sum of at most $\rho$ columns of $H$.
+
+It should be very clear by now that any codeword $\vec{x} \in C$ is characterised by syndrome $\vec{0}$, since this just follows from definition.
+
+The importance of the syndrome comes from the aid it provides in decoding a received $\vec{x}$. Since $C$ is a subgroup of $\mathcal{Q}^n$ then $\mathcal{Q}^n$ can be partitioned into cosets of $C$. If two vectors $\vec{x}$ and $\vec{y}$ have the same syndrome, then they must both be elements of the same coset. Likewise, if the two vectors are part of the same coset, then they must both have the same syndrome. In total one can then write
+\[
+\vec{x} H^T = \vec{y} H^T \Leftrightarrow \vec{x}, \vec{y} \in C.
+\]
+So if a vector $\vec{x}$ is received that has error pattern $\vec{e}$, then $\vec{x}$ and $\vec{e}$ will have the same syndrome, since the errors in $\vec{e}$ are in the same positions as they are in $\vec{x}$. This also means that in order to achieve a maximum likelihood decoding of $\vec{x}$ one must first find and choose a vector $\vec{e}$ in the same coset as $\vec{x}$ and then decode $\vec{x}$ as $\vec{x} - \vec{e}$. In this case the vector $\vec{e}$ is called the \emph{coset leader}.
+
+This is where the great benefit of introducing an algebraic structure to codes first appears. For an $\left[n,k\right]$ code over $\F_q$ there are a total of $q^k$ codewords and $q^n$ possible received messages. Assuming that the information rate is reasonably high, then the receiver only needs to know the $q^{n-k}$ possible coset leaders corresponding to all possible syndromes and since the information rate is high, then $q^{n-k}$ is much smaller than $q^n$. If the code had no algebraic structure, then one would have to list the most likely transmitted word for every possible received word $\vec{x}$, so this is a huge improvement!
+
+Now consider a code $C$ that has minimum distance $d = 2e+1$. In this case every error pattern of weight $\leq e$ must be the unique coset leader of some coset because two vectors both with weight $\leq e$ must have distance $\leq 2e$ and are therefore elements of different cosets. Now, if $C$ is a perfect code, then there simply are not any other coset leaders. In the case that $C$ has minimum distance $2e+1$ and all coset leaders have weight $\leq e+1$, then $C$ is called \emph{quasi-perfect}. The covering radius will be the weight of a coset leader with maximum weight.
+
+Sometimes it might be useful to actually add an extra symbol to every codeword in $C$ according to some natural rule. The following definition gives a common way of doing so.
+\begin{defi}[Extended Code]
+\label{def:extCode}
+	Let $C$ be a code of length $n$ over the alphabet $\F_q$. The \emph{extended code $\overline{C}$} of $C$ is then
+	\[
+		\overline{C} = \left\{ \left(c_1 , c_2 , \cdots , c_n , c_{n+1} \right) \ \middle\vert \ \left(c_1 , \cdots , c_n \right) \in C, \ \sum_{i = 1}^{n +1} c_i = 0 \right\}.
+	\]
+\end{defi}
+
+Now if $C$ is a linear code with generator matrix $G$ and parity check matrix $H$, then $\overline{C}$ will also have a generator matrix $\overline{G}$ and a parity check matrix $\overline{H}$. $\overline{G}$ is simply made from $G$ by adding a column such that all the columns columns of $\overline{G}$ adds up to $0$ and $\overline{H}$ is produced from $H$ as the following matrix:
+\[
+	\overline{H} = \begin{pmatrix}
+		1 & 1 & 1 & \cdots & 1\\
+		& & & & 0\\
+		& & H & & 0\\
+		& & & & \vdots \\
+		& & & & 0
+	\end{pmatrix}.
+\]
+
+Lastly let me note that if $C$ is a binary code with an odd minimum distance $d$, then $\overline{C}$ has minimum distance $d+1$, since all weights and distances for $\overline{C}$ are even.

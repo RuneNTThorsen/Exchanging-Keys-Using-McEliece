@@ -1,0 +1,819 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 5: Achieving CCA2 Security
+%% ============================================================================
+
+\chapter{Achieving CCA2 Security}
+\label{chap:achCCA2Sec}
+
+In 1999 Fujisaki and Okamoto proposed a way to turn a weak public key cryptosystem into one that is IND-CCA2 in the random oracle model \cite{FO}. Their work was later improved upon in \cite{HHK}, where such a transformation has been broken down into several smaller transformations, achieving modularity. Any such transformation will usually be called an \emph{FO}-transformation. Since this later paper improves upon the original work, I will follow this instead of the original in \cref{sec:theFirMod,sec:theSecMod} and show how to build a version of the McEliece PKC that is CCA2 secure in \cref{sec:traOrgMcEPKC}. The purpose of this chapter is then to show that key exchanges using the McEliece PKC can be done with CCA2 security. Before showing so though, there are five small sections of introduction that are needed if one is to understand the full picture.
+
+
+
+\section{Some Additional Security Notions}
+\label{sec:somAddSecNot}
+
+Much as in the start of \cref{sec:cipOnlAttMceCry} I will here go over some security definitions that will be needed later in order to understand, what it actually is that this chapter aims to do.
+
+
+
+\subsection{One-Way Under Chosen Plaintext Attacks}
+\label{subsec:OWUCPA}
+
+There are several different ways of stating the security definition that I will attempt to arrive at in this section. For now I will follow the way that it is defined in \cite{HHK}. So let $\Pi = \left(G,E,D\right)$ be a public key cryptosystem defined in the usual way with plaintext space $\mathcal{M}$ and let $A$ be an adversary and $O$ be an oracle. Consider the following game.
+\begin{description}
+	\item[$\mathrm{\mathbf{OW-CPA}}$] Both the adversary $A$ and the oracle $O$ gets the security parameter $k$ as input.
+	\begin{enumerate}
+		\item $O$ runs $G\left(k\right)$ to get $\left(pk,sk\right)$ and gives $pk$ to $A$.
+		\item $O$ then chooses a valid plaintext $\vec{m}$ and encrypts it to $\vec{c} = E_{pk}\left(\vec{m}\right)$ and gives $\vec{c}$ to $A$.
+		\item $A$ then has to output a message $\vec{m}'$ and give it to $O$.
+		\item $O$ checks if $D_{sk}\left(\vec{c}\right) = \vec{m}'$ and outputs $1$ if this is true and $0$ if this is not true.
+	\end{enumerate}
+\end{description}
+The adversary $A$ only wins the game if $O$ outputs $1$ in the last step of the game. Again $O$ will implicitly reject messages (by outputting $0$) if $\vec{m}'$ is not a valid plaintext.
+
+The adversarial advantage of adversary $A$ in the game $\mathrm{OW-CPA}$ done one cryptosystem $\Pi$ will be denoted by $Adv_{\Pi}^{\mathrm{OW-CPA}}\left(A\right)$. The game is usually denoted by $\mathrm{OW-CPA}^A_{\Pi}$. In general any game $\Gamma$ played by some algorithm $A$ on cryptosystem $\Pi$ will be denoted $\Gamma_{\Pi}^A$ and the adversarial advantage in a given game $\Gamma$ played by adversary $A$ on cryptosystem $\Pi$ will be denoted by $Adv_{\Pi}^{\Gamma}\left(A\right)$.
+
+Notice that the advantage of an adversary in a given type of attack is just the probability that the adversary will succeed in its attack. It follows that
+\[
+	Adv_{\Pi}^{\mathrm{OW-CPA}}\left(A\right) = P\left( \mathrm{OW-CPA}^A_{\Pi} \Rightarrow 1 \right) .
+\]
+Which in turn gives rise to yet another security definition.
+\begin{defi}[$\mathrm{\mathbf{OW-CPA}}$]
+	Let $\Pi = \left(G,E,D\right)$ be a public key cryptosystem with key generating algorithm $G$, encryption algorithm $E$, decryption algorithm $D$ and security parameter $k$. Let also $A$ be an adversary to the system. If $Adv_{\Pi}^{\mathrm{OW-CPA}}\left(A\right)$ is negligible in $k$, then $\Pi$ is said to be \emph{one-way under chosen plaintext attacks} (\emph{$\mathrm{OW-CPA}$}).
+\end{defi}
+
+
+
+\subsection{Plaintext Checking Attacks}
+\label{subsec:plaCheAtt}
+
+Here I will follow \cite{HHK} and give a formal introduction of what is called a \emph{one-wayness under plaintext checking attack} (\emph{OW-PCA}). This will lead to another notion of security -- but this time the security notion is not a standard one.
+
+Let $\Pi = \left(G,E,D\right)$ be a public key cryptosystem with security parameter $k$ as in \cref{sec:cipOnlAttMceCry}, let $A$ be an adversary and let $O$ be an oracle. Assume that $A$ has access to an oracle $O_{\mathrm{PCO}}$ that takes a message $\vec{m}$ and a ciphertext $\vec{c}$ and checks if $D_{sk}\left(\vec{m}\right) = \vec{c}$ and implicitly rejects non-valid plaintexts. Whenever some algorithm $A$ has access to some oracle $O$, then denote it by $A^{O}$. The attack is then modelled as the following game.
+\begin{description}
+	\item[$\mathrm{\mathbf{OW-PCA}}$] Both the adversary $A^{O_{\mathrm{PCO}}}$ and the oracle $O$ gets the security parameter $k$ as input.
+	\begin{enumerate}
+		\item $O$ runs $G\left(k\right)$ to get $\left(pk,sk\right)$ and gives $pk$ to $A^{O_{\mathrm{PCO}}}$.
+		\item $O$ then chooses a valid plaintext $\vec{m}$ at random and encrypts it with the public key to get $\vec{c} = E_{pk}\left(\vec{m}\right)$ and gives $\vec{c}$ to $A^{O_{\mathrm{PCO}}}$.
+		\item $A^{O_{\mathrm{PCO}}}$ now has to output a message $\vec{m}'$ and gives it to $O$.
+		\item $O$ checks if $D_{sk}\left(\vec{c}\right) = \vec{m}'$ and outputs $1$ if this is true and $0$ if this is not true.
+	\end{enumerate}
+\end{description}
+The adversary $A$ only wins the game if $O$ outputs $1$ in the last step of the game. Please note that the definition of $O$ in this game is such that it returns $0$ if $\vec{m}'$ is not a valid message.
+
+This gives the following.
+\[
+	Adv_{\Pi}^{\mathrm{OW-PCA}}\left( A^{O_{\mathrm{PCO}}} \right) = P\left( \mathrm{OW-PCA}^{A^{O_{\mathrm{PCO}}}}_{\Pi} \Rightarrow 1 \right) .
+\]
+
+Now the non-standard security definition, that I mentioned earlier, can be introduced.
+\begin{defi}[$\mathrm{\mathbf{OW-PCA}}$]
+\label{def:owpca}
+	A public key cryptosystem $\Pi$ with security parameter $k$ is said to be \emph{one-way under plaintext checking attacks} (\emph{$\mathrm{OW-PCA}$}) if for all probabilistic polynomial time adversaries $A$, it holds that $Adv_{\Pi}^{\mathrm{OW-PCA}}\left( A^{O_{\mathrm{PCO}}} \right) $ is negligible in $k$.
+\end{defi}
+
+
+
+\section{Hash Functions}
+\label{sec:hashFunctions}
+
+Hash functions are defined as below.
+\begin{defi}[Hash Functions]
+\label{def:hashFunctions}
+	A \emph{hash function} is a function that can map data of arbitrary size to an output that has a fixed number of bits in length.
+\end{defi}
+The output of a hash function may be called a \emph{digest}, \emph{hash codes}, \emph{hash value} or just \emph{hash}.
+
+Now let $A$ be an adversary and let $h$ be a hash function.
+\begin{defi}[Collision]
+\label{def:collision}
+	Suppose $A$ has access to a hash function $h$. Suppose also that $A$ outputs two strings $\vec{m}$, $\vec{m}'$. If $\vec{m} \neq \vec{m}'$ whilst $h\left(\vec{m}\right) = h\left(\vec{m}'\right)$, then $A$ has found a \emph{collision} of the hash function $h$.
+\end{defi}
+\begin{defi}[Collision Intractable]
+\label{def:collIntr}
+	Let $A$ be a probabilistic polynomial time adversary. If $A$ can find a collision for the hash function $h$ with only negligible probability, then the hash function $h$ is said to be \emph{collision intractable}.
+\end{defi}
+
+I have already used the term one-way. Let me just quickly introduce one-way functions formally though.
+\begin{def}
+\label{def:oneWayFunction}
+	A function $f$ is said to be \emph{one-way} if it is easy to compute on every input, but hard to invert given the image of a random input.
+\end{def}
+Note that the words ``easy'' and ``hard'' here are to be understood in the realm of computational complexity.
+
+The following theorem is well-known and rather interesting.
+\begin{thm}
+\label{thm:collIntrMeansOneWay}
+	Collision intractable hash functions are one-way functions.
+\end{thm}
+
+
+
+
+\section{Code Based Games}
+\label{sec:CodBasGam}
+
+Sometimes it might be useful to introduce something called \emph{code based games}. The games are essentially algorithms (some even with subroutines), but before introducing them, some notation is needed.
+
+For a set $S$, let $x \xleftarrow{\$} S$ denote the uniform sampling of $x \in S$. If the sampling is done according to some distribution $\mathcal{D}$ however, then it will be written as $x \leftarrow \mathcal{D}$. Now when having a boolean statement $B$, $\left\llbracket B \right\rrbracket$ will return $1$ if $B$ is \texttt{true} and $0$ if $B$ is \texttt{false}.
+
+Now as for algorithms, if they are given input $x$, then their deterministic computation will be written $y = A\left(x\right)$. As a general rule though, they will usually be assumed to be working probabilistic and thus the computation will be denoted $y \leftarrow A\left(x\right)$.
+
+Hash functions $h: \mathcal{D}_h \rightarrow \mathcal{V}\left(h\right)$ will at times be modelled as random oracles. These will have a list of queries that they have been issued as a hash list $\mathcal{L}_h$, which contains tuples $\left(x, h\left(x\right)\right)$ of arguments $x \in \mathcal{D}_h$ and answers $h\left(x\right)$. If $x \notin \mathcal{D}_h$, then the convention will be that $h\left(x\right) = \bot$ (where $\bot$ is used as a special symbol to denote a rejection).
+
+The games themselves are constructed following \cite{shoup,BR} with boolean flags initialised to \texttt{false}, numerical types to $0$, sets to the empty set $\emptyset$ and strings to the empty string $\Lambda$. They will terminate, once they have returned some output.
+
+The games will as usual be done by some adversary on a cryptosystem, so let the public key cryptosystem $\Pi = \left(G,E,D\right)$ be defined in the usual way. $\Pi$ will have plaintext space $\mathcal{M}$ and ciphertext space $\mathcal{C}$. Additionally the public key $pk$ will define some randomness space $\mathcal{R} = \mathcal{R}\left(pk\right)$. The used randomness might be made explicit by writing $\vec{c} \leftarrow E_{pk}\left(\vec{m}; \vec{r}\right)$ where $\vec{r} \in \mathcal{R}$ (such notation can also be used for other probabilistic algorithms other than just the encryption function).
+
+In order to not repeat things, sometimes the games will have lines with comments, where the comments signify which game the commented line belongs to. This is because some games include many of the same lines.
+
+\Cref{alg:PCO} is an example of a simple subprocedure of a code based game and is essentially a plaintext checking oracle (earlier this was denoted as $O_{\mathrm{PCO}}$). By convention, if $\vec{m} \notin \mathcal{M}$, then it returns $\mathrm{PCO}\left(\vec{m} \notin \mathcal{M}, \vec{c}\right) = \bot$ -- that is it has rejection of non-valid messages.
+
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$\mathrm{PCO}\left(\vec{m} \in \mathcal{M}, \vec{c}\right)$}
+			\label{alg:PCO}
+			\begin{algorithmic}
+				\State \textbf{Return} $\left\llbracket D_{sk}\left(\vec{c}\right) = \vec{m} \right\rrbracket$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+Let $\bullet \land \bullet$ denote the logical $\mathrm{AND}$-operator and let $\neg \bullet$ denote the event that something does not happen. The following lemma is due to \cite{shoup} and will be useful later.
+\begin{lem}[Difference Lemma]
+\label{lem:DiffLemm}
+	Let $A$, $B$, $F$ be events defined in some probability distribution and suppose that $A \land \neg F \Leftrightarrow B \land \neg F$. Then
+	\[
+		\abs{P\left(A\right) - P\left(B\right)} \leq P\left(F\right).
+	\]
+	\begin{Proof}
+		Assume that $A \land \neg F \Leftrightarrow B \land \neg F$ and then $P\left(A \land \neg F\right) = P\left(B \land \neg F\right)$. Now since $P\left(A \land F\right)$ and $P\left(B \land F\right)$ are both numbers between $0$ and $P\left(F\right)$, it follows that
+		\begin{align*}
+			\abs{P\left(A\right) - P\left(B\right)} &= \abs{P\left(A \land F\right) + P\left(A \land \neg F\right) - P\left(B \land F\right) - P\left(B \land \neg F\right)}\\
+				&= \abs{P\left(A \land F\right) - P\left(B \land F\right)}\\
+				&\leq P\left(F\right).
+		\end{align*}
+	\end{Proof}
+\end{lem}
+
+
+
+\section{Correctness Of Public Key Cryptosystems}
+\label{sec:correctness}
+
+Let $\mathrm{E}\left(\bullet\right)$ denote some expected value. Now if for some public key cryptosystem $\Pi = \left(G,E,D\right)$, it is true that
+\[
+	\mathrm{E}\left( \max\limits_{\vec{m} \in \mathcal{M}} P\left(D_{sk}\left(\vec{c}\right) \neq \vec{m} \ \vert \ \vec{c} \leftarrow E_{pk}\left(\vec{m}\right)\right) \right) \leq \delta
+\]
+then $\Pi$ will be called \emph{$\delta$-correct}. The expectation is taken over $\left(pk,sk\right) = G\left(k\right)$.
+
+Suppose some adversary $A$ plays the following game on $\Pi$ with an oracle $O$.
+\begin{description}
+	\item[$\mathrm{\mathbf{COR}}$] Input to both $A$ and $O$ the security parameter of $\Pi$, $k$.
+	\begin{enumerate}
+		\item $O$ runs $G\left(k\right)$ to generate $\left(pk,sk\right)$ and gives this tuple to $A$.
+		\item $A$ chooses a message $\vec{m}$ and gives to $O$.
+		\item $O$ encrypts $\vec{m}$, by computing $\vec{c} = E_{pk}\left(\vec{m}\right)$.
+		\item $O$ checks if $D_{sk}\left(\vec{c}\right) = \vec{m}$ and returns $1$ if this is true and $0$ if this is not true.
+	\end{enumerate}
+\end{description}
+In this case, $\delta$-correctness will mean that
+\[
+	P\left( \mathrm{COR}^A_{\Pi} \Rightarrow 1 \right) \leq \delta.
+\]
+
+If however $\Pi = \Pi^{O_1}$ is defined in relation to some random oracle $O_1$, then the correctness bound might depend on the amount of queries made to said oracle $O_1$. Denote this amount by $q_{O_1}$. In this case the game will be called $\mathrm{COR-RO}^A_{\Pi}$ and if $A$ makes at most $q_{O_1}$ queries to the oracle $O_1$, then if
+\[
+	P\left( \mathrm{COR-RO}^A_{\Pi} \Rightarrow 1 \right) \leq \delta\left( q_{O_1} \right) ,
+\]
+$\Pi$ will be said to be \emph{$\delta\left( q_{O_1} \right)$-correct}. The game $\mathrm{COR-RO}$ in which $A$ has access to oracle $O_1$ and plays on cryptosystem $\Pi$ with oracle $O$ can be seen below.
+\begin{description}
+	\item[$\mathrm{\mathbf{COR-RO}}$] Input to both $A$ and $O$ the security parameter of $Pi$, $k$.
+	\begin{enumerate}
+		\item $O$ runs $G\left(k\right)$ to get $\left(pk,sk\right)$ and gives this tuple to $A$.
+		\item $A^{O_1}$ chooses a message $\vec{m}$ and gives to $O$.
+		\item $O$ encrypts $\vec{m}$, by computing $\vec{c} = E_{pk}\left(\vec{m}\right)$.
+		\item $O$ checks if $D_{sk}\left(\vec{c}\right) = \vec{m}$ and returns $1$ if this is true and $0$ if this is not true.
+	\end{enumerate}
+\end{description}
+Note that if the number of oracle queries is $0$, then $\delta\left( q_{O_1} \right)$ is constant and thus the above correctness definitions are a special case of correctness in the random oracle model.
+
+If however $\Pi$ is being defined in relation to two different random oracles, then the correctness error, $\delta$, will have to be stated in terms of the amount of queries to both of these oracles.
+
+
+
+\subsection{Rigidity Of Public Key Cryptosystems}
+\label{subsec:rigOfPubKeyCry}
+
+Bernstein and Persichetti came up with the notion of a cryptosystem being rigid in 2018 in \cite{BP2}. The idea is basically just that a rigid cryptosystem will always return the correct plaintext, when decryption is run on an encryption of said plaintext and reject otherwise.
+
+\begin{defi}[Rigid Cryptosystem]
+\label{def:rigCry}
+	Let $\Pi = \left(G,E,D\right)$ be a deterministic cryptosystem. If for all key pairs $\left(pk, sk\right) \leftarrow G$ and all ciphertexts $\vec{c}$ it holds that $D_{sk}\left(\vec{c}\right) = \bot$ or $E_{pk} \left(D_{sk}\left(\vec{c}\right)\right) = \vec{c}$, then $\Pi$ is said to be \emph{rigid}.
+\end{defi}
+
+
+
+\section{Key Encapsulation}
+\label{sec:keyEncaps}
+
+Here I will introduce key encapsulation mechanisms. The idea behind them is that they are a way of exchanging keys between two parties, without actually sending the key itself or an encryption of said key. Instead an encapsulation of the key is sent and the hope is that the desired key is hard to find from the encapsulation. This can prove useful in scenarios, where a key has to be negotiated (for example in the case of negotiating a key to be used for symmetric cryptosystems -- which reflects how public key cryptosystems typically are used in practice).
+
+A \emph{key encapsulation mechanism} (\emph{KEM}) consists of three algorithms. The algorithms are as follows. Firstly there is a \emph{key generation algorithm}, \emph{$\mathrm{Gen}$}, that takes a security parameter $k$ and outputs a key pair $\left(pk,sk\right)$, where $pk$ will define a finite key space $\mathcal{K}$.
+\[
+	\mathrm{Gen}\left(k\right) = \left(pk, sk\right).
+\]
+The second is a \emph{key encapsulation algorithm}, \emph{$\mathrm{Encaps}$}, that takes the public key, $pk$, as a parameter and outputs a tuple, $\left(K,\vec{c}\right)$, where $\vec{c}$ is an encapsulation of the key $K$.
+\[
+	\mathrm{Encaps}\left(pk\right) = \left(K, \vec{c}\right).
+\]
+The third and final algorithm is a deterministic \emph{decapsulation algorithm}, \emph{$\mathrm{Decaps}$}, that takes the private key, $sk$, and an encapsulation, $\vec{c}$, as parameters and outputs either a key $K = \mathrm{Decaps}\left(sk,\vec{c}\right) \in \mathcal{K}$ or rejects if $\vec{c}$ is not a valid encapsulation.
+\[
+	\mathrm{Decaps}\left(sk, \vec{c}\right) = \begin{cases}
+		K = \mathrm{Decaps}\left(sk,\vec{c}\right) \in \mathcal{K} & \text{if $\vec{c}$ is a valid encapsulation}\\
+		\text{reject} & \text{if $\vec{c}$ is not a valid encapsulation}
+	\end{cases}.
+\]
+Such a key encapsulation mechanism will be written as
+\[
+	\mathrm{KEM} = \left(\mathrm{Gen}, \mathrm{Encaps}, \mathrm{Decaps}\right).
+\]
+
+Now let $P$ be a probability and if
+\[
+	P\left(\mathrm{Decaps}\left(sk,\vec{c}\right) \neq K \ \vert \ \left(pk,sk\right) = \mathrm{Gen}, \ \left(K,\vec{c}\right) = \mathrm{Encaps}\left(pk\right)\right) \leq \delta
+\]
+then the used key encapsulation mechanism will be called \emph{$\delta$-correct}. Additionally it is noted that this definition also makes sense in the random oracle model.
+
+
+
+\subsection{CCA2 In Terms of Key Encapsulation Mechanisms}
+\label{subsec:CCA2AsACodBasGam}
+
+One thing that will be useful later is a reformulation of the game from \cref{sec:cipOnlAttMceCry} and its adversarial advantage. This will be done in the way of a game based on key encapsulation mechanisms just as in \cite{HHK} and is written below.
+
+Let $O_{\mathrm{Decaps}}$ be a decapsulation oracle, that will perform the decapsulation algorithm as defined above. Suppose $A^{O_{\mathrm{Decaps}}}$ has access to this specific oracle and plays the following game with the oracle $O^{\mathrm{CCA}2}$.
+\begin{description}
+	\item[$\mathbf{CCA2}$] Input to both $O^{\mathrm{CCA}2}$ and $A^{O_{\mathrm{Decaps}}}$ the security parameter $k$.
+		\begin{enumerate}
+			\item $O^{\mathrm{CCA}2}$ runs $\mathrm{Gen}\left(k\right)$ to get $\left(pk, sk\right)$ and gives $pk$ to $A^{O_{\mathrm{Decaps}}}$.
+			\item $O^{\mathrm{CCA}2}$ then computes the tuple $\left(K_0, \vec{c}\right) = \mathrm{Encaps}\left(pk\right)$. $O^{\mathrm{CCA}2}$ also chooses a random key $K_1 \in \mathcal{K}$. $O^{\mathrm{CCA}2}$ then gives a tuple $\left(K_b, \vec{c}\right)$ to $A^{O_{\mathrm{Decaps}}}$, where $K_b$ is chosen among $K_0$ and $K_1$ uniformly at random.
+			\item $A^{O_{\mathrm{Decaps}}}$ can make as many queries as it wants to $O_{\mathrm{Decaps}}$, but at the end of this step, it has to output a guess $b'$, signifying its guess as to whether it holds $\left(K_0, \vec{c}\right)$ or $\left(K_1, \vec{c}\right)$.
+			\item If $A^{O_{\mathrm{Decaps}}}$ guesses correctly, then $O^{\mathrm{CCA}2}$ will output $1$ and if $A^{O_{\mathrm{Decaps}}}$ does not guess correctly, then $O^{\mathrm{CCA}2}$ will output $0$.
+		\end{enumerate}
+\end{description}
+
+Let $\kappa$ denote the key encapsulation mechanism that is used and then this game has the adversarial advantage
+\[
+	Adv^{\mathrm{CCA}2}_{\kappa}\left( A^{O_{\mathrm{Decaps}}} \right) = \abs{P\left( \mathrm{CCA}2^{A^{O_{\mathrm{Decaps}}}}_{\kappa} \Rightarrow 1 \right) - \frac{1}{2}} .
+\]
+Again if this is negligible, then the key encapsulation mechanism will be indistinguishable against adaptive chosen ciphertext attacks (IND-CCA2).
+
+
+
+\section{The First Transformation}
+\label{sec:theFirMod}
+
+Let $\Pi = \left(G,E,D\right)$ be a public key cryptosystem with message space $\mathcal{M}$ and ciphertext space $\mathcal{C}$. Let $h$ be a hash function
+\[
+	h: \mathcal{M} \rightarrow \mathcal{R}.
+\]
+The following transformation will be called $T$ and is in fact the Encrypt-with-Hash construction from \cite{BBO} originally proposed by Bellare et al. in 1998 \cite{BHSV}.
+
+The transformation transforms a cryptosystem $\Pi$ such as to build a new cryptosystem
+\[
+	\Pi_1 = T\left(\Pi, h\right) = \left(G, E_1, D_1\right)
+\]
+that is deterministic. Please note that the key generation algorithm is exactly the same as in $\Pi$.
+
+Let $\vec{m},\vec{m}' \in \mathcal{M}$ and $\vec{c} \in \mathcal{C}$. Now I can describe just exactly how this new $\Pi_1$ works.
+\begin{description}
+	\item[Key Generation:] The same as in $\Pi$.
+	\item[Encryption:] To encrypt a plaintext $\vec{m}$, compute
+		\[
+			\vec{c} = E_1\left(pk, \vec{m}\right) = E_{pk}\left(\vec{m}; h\left(\vec{m}\right)\right).
+		\]
+	\item[Decryption:] To decrypt a ciphertext $\vec{c}$ start by computing
+		\[
+			\vec{m}' = D_{sk}\left(\vec{c}\right).
+		\]
+		If $\vec{m}'$ is not a valid plaintext or if $E_1\left(pk, \vec{m}'\right) \neq \vec{c}$ then abort. Else return $\vec{m}'$.
+\end{description}
+Here it is presupposed that $E$ uses a random vector when encrypting plaintext $\vec{m}$, but in this case it is replaced by the digest of $h$ on the message that is to be encrypted. The decryption function just works as usual with the additional step of actually checking that encryption was done correctly.
+
+
+
+\subsection{Implying $\mathbf{OW-PCA}$ From $\mathbf{OW-CPA}$ With Correctness}
+\label{subsec:ImpPCAFroCPA}
+
+Here I will follow \cite{HHK} in showing how the $T$-transformation can be used to achieve an $\mathrm{OW-PCA}$ cryptosystem from an $\mathrm{OW-CPA}$ one. So let $\Pi$ and $\Pi_1$ be as above and assume that $\Pi$ is $\delta$-correct.
+
+Consider an adversary $A$ that plays the game $\mathrm{COR-RO}$ on $\Pi_1$. This game will involve at most $q_{h}$ queries to the random oracle $h$, $h\left(\vec{m}_0\right), \cdots, h\left(\vec{m}_{q_{h} - 1}\right)$. Now if such a query yields $h\left(\vec{m}_i\right) = D_1\left(sk, E_1\left(pk, \vec{m}_i; h\left(\vec{m}_i\right)\right)\right) \neq \vec{m}_i$, then the query will be called \emph{problematic}. Since it is assumed that $\Pi$ is $\delta$-correct however, then given that $h$ returns independently random values and averaging over $\left(pk, sk\right)$, every $h\left(\vec{m}_i\right)$ is problematic with probability at most $\delta$. So the probability of a query being problematic is at most $q_{h} \cdot \delta$ meaning that
+\[
+	P\left( \mathrm{COR-RO}^A_{\Pi_1} \Rightarrow 1 \right) \leq q_{h} \cdot \delta.
+\]
+Notice also that the resulting $\Pi_1$ is deterministic. This proves the following.
+\begin{thm}
+\label{thm:deltaCorrectnessOfPi1}
+	Let $\Pi$ be a public key cryptosystem that is $\delta$-correct, $h$ be a hash function and let $\Pi_1 = T\left(\Pi, h\right)$. Suppose $A$ is playing the game $\mathrm{COR-RO}^A_{\Pi}$ and makes at most $q_h$ queries to the random oracle $h$. Then $\Pi_1$ is $\delta_1$-correct with $\delta_1\left( q_{h} \right) = q_{h} \cdot \delta$. Furthermore $\Pi_1$ is rigid.
+\end{thm}
+
+With this out of the way, on to security then. Consider the code based games in \cref{alg:G0toG2,alg:PCOInGames,alg:O1}.
+
+\begin{center}
+\begin{minipage}[ht!]{0.8\textwidth}
+	\begin{algorithm}[H]
+	\centering
+	\caption{Games $G_0$-$G_2$}
+	\label{alg:G0toG2}
+	\begin{algorithmic}
+		\State $\left(pk,sk\right) \leftarrow G$
+		\State $\vec{m} \xleftarrow{\$} \mathcal{M}$
+		\State $\vec{c} \leftarrow E_1\left(pk, \vec{m}\right)$
+		\State $\vec{m}' \leftarrow B^{h\left(\bullet\right), \mathrm{PCO}\left(\bullet, \bullet\right)}\left(pk, \vec{c}\right)$
+		\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m} \right\rrbracket$
+	\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.8\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{PCO}\left(\vec{m}'' \in \mathcal{M}, \vec{c}'\right)$}
+		\label{alg:PCOInGames}
+		\begin{algorithmic}
+			\State $\vec{m}' = D_1\left(sk, \vec{c}'\right)$ \Comment{$G_0$}
+			\State \textbf{Return} $\left\llbracket \vec{m}' = \vec{m}'' \right\rrbracket \land \left\llbracket E_1\left(pk, \vec{m}'; h\left(\vec{m}'\right)\right) = \vec{c}' \right\rrbracket$ \Comment{$G_0$}
+			\State \textbf{Return} $\left\llbracket E_1\left(pk, \vec{m}''; h\left(\vec{m}''\right)\right) = \vec{c}' \right\rrbracket$ \Comment{$G_1$-$G_2$}
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+	\begin{minipage}[ht!]{0.8\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$h\left(\vec{m}''\right)$}
+			\label{alg:O1}
+			\begin{algorithmic}
+				\If{$\exists r \ : \ \left(\vec{m}'', r\right) \in \mathcal{L}_{h}$}
+					\State \textbf{Return} $r$
+				\EndIf
+				\If{$\vec{m}' = \vec{m}''$} \Comment{$G_2$}
+					\State $\mathrm{QUERY} = \mathrm{true}$ \Comment{$G_2$}
+					\State \textbf{Abort} \Comment{$G_2$}
+				\EndIf \Comment{$G_2$}
+				\State $r \xleftarrow{\$} \mathcal{R}$
+				\State $\mathcal{L}_{h} = \mathcal{L}_{h} \cup \left\{ \left(\vec{m}', r\right) \right\}$
+				\State \textbf{Return} $r$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+The claim is that $\Pi_1 = T\left(\Pi\right)$ is a $\mathrm{OW-PCA}$ secure public key cryptosystem. To show this, suppose $B = B^{h\left(\bullet\right), \mathrm{PCO}\left(\bullet, \bullet\right)}$ is an adversary against the $\mathrm{OW-PCA}$ security of $\Pi_1$ playing the games $G_0$ to $G_2$ that has access to $h$ as defined in \cref{alg:O1} and $\mathrm{PCO}$ as defined in \cref{alg:PCOInGames}. Suppose further that $B$ issues at most $q_{h}$ issues to $h$ and at most $q_{P}$ queries to $\mathrm{PCO}$.
+
+As for game $G_0$, this is just the original $\mathrm{OW-PCA}$ game. The random oracle queries are stored in the set $\mathcal{L}_{h}$ and by convention, $h\left(\vec{m}'\right) = r \Leftrightarrow \left(\vec{m}', r\right) \in \mathcal{L}_{h}$. This gives
+\[
+	P\left( G_0^{B} \Rightarrow 1 \right) = Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right).
+\]
+
+Now in games $G_1$ and $G_2$, the plaintext checking oracle $\mathrm{PCO}\left(\vec{m}'', \vec{c}'\right)$ is replaced by a simulation that no longer does the check to see whether or not $\vec{m}'' = \vec{m}'$, with $\vec{m}' = D_1\left(sk, \vec{c}'\right)$. Observe that the whole game $G_1$ makes at most $q_{h}$ queries to $h$. In the case that no queries $h\left(\vec{m}'_i\right)$ is problematic, then game $G_1$ proceeds and if $B$ submits a $\mathrm{PCO}$ query $\left(\vec{m}'', \vec{c}'\right)$ together with an $h$ query $h\left(\vec{m}'\right)$ that is problematic and $\vec{c}' = E_1\left(pk, \vec{m}''; h\left(\vec{m}''\right)\right)$, then $G_1$ returns $1$. Together with \cref{thm:deltaCorrectnessOfPi1} this gives
+\[
+	\abs{P\left( G_1^B \Rightarrow 1 \right) - P\left( G_0^B \Rightarrow 1 \right) } \leq \left( q_{h} + q_P \right) \cdot \delta.
+\]
+
+$G_2$ and $G_1$ only differs if the flag $\mathrm{QUERY}$ is raised, in which case $G_2$ aborts. If this flag is raised, it means that $B$ made a query to $h$ on the target plaintext $\vec{m}$, since $\left(\vec{m}, \bullet\right) \in \mathcal{L}_{h}$. Now \cref{lem:DiffLemm} gives
+\[
+	\abs{P\left( G_2^B \Rightarrow 1 \right) - P\left( G_1^B \Rightarrow 1 \right) } \leq P\left(\mathrm{QUERY}\right).
+\]
+Consider the adversary $C$ against the $\mathrm{OW-CPA}$ security of the original cryptosystem $\Pi$ from \cref{alg:CFromThm31InHHK}.
+\hfill
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+		\centering
+		\caption{$C\left(pk, \vec{c}\right)$}
+		\label{alg:CFromThm31InHHK}
+			\begin{algorithmic}
+				\State $\vec{m}' \leftarrow B^{h\left(\bullet\right), \mathrm{PCO}\left(\bullet, \bullet\right)}\left(pk, \vec{c}\right)$
+				\State \textbf{Return} $\vec{m}'$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+$C$ starts out by having input $\left(pk, \vec{c} \leftarrow E_{pk}\left(\vec{m}\right)\right)$, where $\vec{m}$ is random and unknown. Then $C$ perfectly simulates the game $G_2$ for $B$ and finally it outputs $\vec{m}' = \vec{m}$ if $B$ wins the game $G_2$. This gives
+\[
+	P\left( G_2^B \Rightarrow 1 \right) = Adv_{\Pi}^{\mathrm{OW-CPA}}\left(C\right).
+\]
+
+Taking all of this so far together establishes the bound
+\[
+	Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right) \leq \left( q_{h} + q_{P} \right) \cdot \delta + P\left(\mathrm{QUERY}\right) + Adv_{\Pi}^{\mathrm{OW-CPA}}\left(C\right).
+\]
+
+\begin{center}
+	\begin{minipage}[ht!]{0.5\textwidth}
+		\begin{algorithm}[H]
+			\centering
+			\caption{$\mathrm{D}\left(pk, \vec{c}\right)$}
+			\label{alg:DFromThm31InHHK}
+			\begin{algorithmic}
+				\State $\vec{m}'' \leftarrow B^{h\left(\bullet\right), \mathrm{PCO}\left(\bullet, \bullet\right)}\left(pk, \vec{c}\right)$
+				\State $\left(\vec{m}', \vec{r}'\right) \xleftarrow{\$} \mathcal{L}_h$
+				\State \textbf{Return} $\vec{m}'$
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+\end{center}
+
+Consider now the adversary $\mathrm{D}$ from \cref{alg:DFromThm31InHHK} against the $\mathrm{OW-CPA}$ security of the not yet transformed cryptosystem $\Pi$. It starts out by having input $\left(pk, \vec{c} \leftarrow E_{pk}\left(\vec{m}\right)\right)$ and then perfectly simulates $B$ in game $G_2$. If $\mathrm{QUERY}$ is set in $G_2$, then there must exist an entry $\left(\vec{m}, \bullet\right) \in \mathcal{L}_h$ and so $D$ will return the correct $\vec{m}' = \vec{m}$ with probability at most $\frac{1}{q_h}$. This means that
+\[
+	P\left(\mathrm{QUERY}\right) \leq \left(q_h + q_P\right) \cdot Adv_{\Pi}^{\mathrm{OW-CPA}}\left(\mathrm{D}\right).
+\]
+
+Now let $F$ be a single adversary to the $\mathrm{OW-CPA}$ security of $\Pi$ and assume that the running time of $B$ is about that of $F$. Folding $C$ and $\mathrm{D}$ into one single adversary $F$ and collecting the probabilities that were deduced from the games in this section then yields
+\begin{equation}
+\label{eq:boundFromThm31InHHK}
+	Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right) \leq \left( q_h + q_P \right) \cdot \delta + \left( q_h + q_P + 1 \right) \cdot Adv_{\Pi}^{\mathrm{OW-CPA}}\left(F\right)
+\end{equation}
+proving the following theorem.
+
+\begin{thm}
+	Let $\Pi$ be a public key cryptosystem that is $\mathrm{OW-CPA}$, $h$ be a hash function and let $\Pi_1 = T\left(\Pi, h\right)$. Then $\Pi_1$ is $\mathrm{OW-PCA}$.
+\end{thm}
+
+
+
+\section{The Second Transformation}
+\label{sec:theSecMod}
+
+Let $\Pi_1 = \left(G_1, E_1, D_1\right)$ be a public key cryptosystem with message space $\mathcal{M}$, $g$ be a hash function an let $\bullet ^{*}$ denote the Kleene Star. $g$ will then be defined by
+\[
+	g: \left\{ 0,1 \right\} ^{*} \rightarrow\mathcal{M}.
+\]
+The following transformation will be called \emph{$U^{\not\bot}$}, is due to \cite{HHK} and yields a key encapsulation mechanism with implicit rejection (in the context of Fujisaki-Okamoto transformations this idea was originally proposed by Persichetti in \cite[section 5.3]{persichetti})
+\[
+	\mathrm{KEM}^{\not\bot} = U^{\not\bot} \left(\Pi_1, g\right) = \left(\mathrm{Gen}^{\not\bot}, \mathrm{Encaps}, \mathrm{Decaps}^{\not\bot}\right).
+\]
+
+The details of $\mathrm{KEM}^{\not\bot}$ are given here.
+\begin{description}
+	\item[$\mathrm{\mathbf{Gen}}^{\mathbf{\not\bot}}$:] Use $G_1$ to generate a key pair $\left(pk,sk\right)$. Choose a uniformly random string $\vec{s} \in \mathcal{M}$ and let $sk' = \left(sk, \vec{s}\right)$.
+	\item[Public Key:] $pk$.
+	\item[Private Key:] $sk'$.
+	\item[$\mathbf{Encaps}$\textbf{:}] To perform the key encapsulation, let $\vec{m} \in \mathcal{M}$ be any valid message and compute
+		\[
+			\vec{c} = E_1\left(pk,\vec{m}\right).
+		\]
+		Then compute
+		\[
+			K = g\left(\vec{m}, \vec{c}\right)
+		\]
+		and return $\left(K, \vec{c}\right)$.
+	\item[$\mathbf{Decaps}^{\mathbf{\not\bot}}$:] Notice that $sk' = \left(sk, \vec{s}\right)$. When receiving $\vec{c}$, compute
+		\[
+			\vec{m}' = D_1\left(sk, \vec{c}\right).
+		\]
+		If decryption succeeds and $\vec{m}'$ is a valid message then return $K = g\left(\vec{m}', \vec{c}\right)$, otherwise return $K = g\left(\vec{s}, \vec{c}\right)$.
+\end{description}
+
+
+
+
+\subsection{Implying IND-CCA2 from $\mathbf{OW-PCA}$ With Correctness}
+\label{subsec:impCCAFromPCA}
+
+The sole reason for using the $U^{\not\bot}$ transform and make the underlying cryptosystem, $\Pi_1$, into a KEM is to obtain a way to exchange keys that is secure in the $\mathrm{CCA}2$ random oracle model. The fact that this is indeed possible will be shown here, following \cite{HHK}.
+
+First a theorem about correctness being preserved.
+\begin{thm}
+\label{thm:corrOfUofTofPi}
+	Let $\Pi_1$ be a $\delta_1$-correct public key cryptosystem and $g$ be a hash function, then $\mathrm{KEM}^{\not\bot} = U^{\not\bot}\left(\Pi_1, g\right)$ is also $\delta_1$-correct in the random oracle model.
+\begin{Proof}
+	Since $g$ is a hash function and thus deterministic, the only randomness in $\mathrm{KEM}^{\not\bot}$ actually comes from $\Pi_1$. This in particular means that
+	\[
+		P\left(\mathrm{Decaps}^{\not\bot}\left(sk',\vec{c}\right) \neq K \ \vert \ \left(pk,sk\right) = G_1, \ \left(K,\vec{c}\right) = \mathrm{Encaps}\left(pk\right)\right) \leq \delta_1.
+	\]
+\end{Proof}
+\end{thm}
+
+Let $A = A^{\mathrm{Decaps}\left(\bullet\right), g\left(\bullet, \bullet\right)}$ be an adversary against the $\mathrm{CCA}2$ security of $\mathrm{KEM}^{\not\bot}$, that issues at most $q_D$ queries to $\mathrm{Decaps}^{\not\bot}$ and at most $q_g$ queries to $g$. Now consider the games $G_3$ to $G_6$ from \cref{alg:G3toG6,alg:h1,alg:decapsForG3ToG4,alg:decapsForG5ToG6}.
+
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{Games $G_3$-$G_6$}
+		\label{alg:G3toG6}
+		\begin{algorithmic}
+			\State $\left(pk, sk\right) \leftarrow \mathrm{Gen}_1$
+			\State $\vec{s} \xleftarrow{\$} \mathcal{M}$
+			\State $sk' = \left(sk, \vec{s}\right)$
+			\State $\vec{m} \xleftarrow{\$} \mathcal{M}$
+			\State $\vec{c} \leftarrow E_1\left(pk, \vec{m}\right)$
+			\State $K_0 = g\left(\vec{m}, \vec{c}\right)$
+			\State $K_1 \xleftarrow{\$} \left\{ 0,1 \right\}^k$
+			\State $b \xleftarrow{\$} \left\{ 0,1 \right\}$
+			\State $b' \leftarrow A^{\mathrm{Decaps}\left(\bullet\right), g\left(\bullet, \bullet\right)}\left(pk, \vec{c}, K_b\right)$
+			\State \textbf{Return} $\left\llbracket b' = b \right\rrbracket$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$g\left(\vec{m}'', \vec{c}'\right)$}
+		\label{alg:h1}
+		\begin{algorithmic}
+			\If{$\exists K \: \ \left(\vec{m}'', \vec{c}', K\right) \in \mathcal{L}_g$}
+				\State \textbf{Return} $K$
+			\EndIf
+			\State $K \xleftarrow{\$} \mathcal{K}$
+			\If{$\vec{m}'' = \vec{s}$} \Comment{$G_4$-$G_6$}
+				\State $\mathrm{QUERY} = \mathrm{true}$ \Comment{$G_4$-$G_6$}
+				\State \textbf{Abort} \Comment{$G_4$-$G_6$}
+			\EndIf \Comment{$G_4$-$G_6$}
+			\If{$D_1\left(sk, \vec{c}'\right) = \vec{m}''$} \Comment{$G_5$-$G_6$}
+				\If{$\vec{c}' = \vec{c}$} \Comment{$G_6$}
+					\State $\mathrm{CHAL} = \mathrm{true}$ \Comment{$G_6$}
+					\State \textbf{Abort} \Comment{$G_6$}
+				\EndIf \Comment{$G_6$}
+				\If{$\exists K' \ : \ \left(\vec{c}', K'\right) \in \mathcal{L}_D$} \Comment{$G_5$-$G_6$}
+					\State $K = K'$ \Comment{$G_5$-$G_6$}
+				\Else \Comment{$G_5$-$G_6$}
+					\State $\mathcal{L}_D = \mathcal{L}_D \cup \left\{ \left(\vec{c}', K\right) \right\}$ \Comment{$G_5$-$G_6$}
+				\EndIf \Comment{$G_5$-$G_6$}
+			\EndIf \Comment{$G_5$-$G_6$}
+			\State $\mathcal{L}_g = \mathcal{L}_g \cup \left\{ \left(\vec{m}'', \vec{c}', K\right) \right\}$
+			\State \textbf{Return} $K$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{Decaps}^{\not\bot}\left(\vec{c}' \neq \vec{c}\right)$ for $G_3$-$G_4$}
+		\label{alg:decapsForG3ToG4}
+		\begin{algorithmic}
+			\State $\vec{m}' = D_1\left(sk, \vec{c}'\right)$
+			\If{$\vec{m}' = \bot$} \Comment{$G_3$}
+				\State \textbf{Return} $K = g\left(\vec{s}, \vec{c}'\right)$ \Comment{$G_3$}
+			\EndIf \Comment{$G_3$}
+			\If{$\vec{m}' = \bot$} \Comment{$G_4$}
+				\State \textbf{Return} $K = g'\left(\vec{c}'\right)$ \Comment{$G_4$}
+			\EndIf \Comment{$G_4$}
+			\If{$\vec{m}' = \vec{s}$} \Comment{$G_4$}
+				\State \textbf{Return} $K = g'\left(\vec{c}'\right)$ \Comment{$G_4$}
+			\EndIf \Comment{$G_4$}
+			\State \textbf{Return} $K = g\left(\vec{m}', \vec{c}'\right)$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$\mathrm{Decaps}^{\not\bot}\left(\vec{c}' \neq \vec{c}\right)$ for $G_5$-$G_6$}
+		\label{alg:decapsForG5ToG6}
+		\begin{algorithmic}
+			\If{$\exists K \ : \ \left(\vec{c}', K\right) \in \mathcal{L}_D$}
+				\State \textbf{Return} $K$
+			\Else
+				\State $K \xleftarrow{\$} \mathcal{K}$
+				\State $\mathcal{L}_D = \mathcal{L}_D \cup \left\{ \left(\vec{c}', K\right) \right\}$
+				\State \textbf{Return} $K$
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Game $G_3$ is just the original $\mathrm{CCA}2$ game and thus gives
+\[
+	\abs{P\left( G_3^A \Rightarrow 1 \right) - \frac{1}{2}} = Adv_{\mathrm{KEM}^{\not\bot}}^{\mathrm{CCA}2}\left(A\right).
+\]
+	
+Game $G_4$ changes two things. Firstly if $g\left(\vec{s}, \bullet\right)$ is queried, then the boolean flag $\mathrm{QUERY}$ is raised. Secondly, $\mathrm{Decaps}^{\not\bot}\left(\vec{c}'\right)$ is made perfectly random. If $\vec{m}' = D_1\left(sk, \vec{c}'\right) = \bot$ or $\vec{m}' = D_1\left(sk, \vec{c}'\right) = \vec{s}$ then $K = g\left(\vec{s}, \vec{c}'\right)$ is replaced by $K = g'\left(\vec{c}'\right)$ $\left(g'\text{ is to be regarded as an internal random oracle, that cannot be accessed by }A\right)$. If $\vec{m}' = D_1\left(sk, \vec{c}'\right) = \vec{s}$ then $A$ will only notice in the case that $A$ queries $g\left(\vec{s}, \bullet\right)$. In that case, $G_4$ will abort. Unless $G_4$ aborts, then $A$'s view is independent of the secret $\vec{s}$. This leads to
+\[
+	\abs{P\left( G_4^A \Rightarrow 1 \right) - P\left( G_3^A \Rightarrow 1 \right) } \leq \frac{q_g}{\size{\mathcal{M}}}.
+\]
+
+In game $G_5$ the $\mathrm{Decaps}^{\not\bot}$ is modified in a way so as to not use the secret key any more. Two lists, $\mathcal{L}_g$ and $\mathcal{L}_D$, are now used. If $\left(\vec{m}'', \vec{c}', K\right) \in \mathcal{L}_g$ then $g$ must have been queried on $\left(\vec{m}'', \vec{c}'\right)$. This also means that $g\left(\vec{m}'', \vec{c}'\right) = K$. If $\left(\vec{c}', K\right) \in \mathcal{L}_D$ then $\mathrm{Decaps}^{\not\bot}\left(\vec{c}'\right) = K$ and either $g$ was queried on $\vec{m}'' = D_1\left(sk, \vec{c}\right)$ or $\mathrm{Decaps}^{\not\bot}$ was queried on $\vec{c}'$. 
+
+Now let $\vec{c}'$ be a fixed ciphertext and let $\vec{m}' = D_1\left(sk, \vec{c}'\right)$. Since $g\left(\bot, \bullet\right)$ is not allowed and $g\left(\vec{s}, \vec{c}'\right)$ results in abort, then if $\vec{m}' \in \left\{ \bot,\vec{s} \right\}$, $g$ can never add the tuple $\left(\vec{c}',K\right)$ to $\mathcal{L}_D$. So in this case, both $G_4$ and $G_5$ will have their $\mathrm{Decaps}^{\not\bot}$ return a uniformly random key.
+
+So assume that $\vec{m}' \notin \left\{ \bot,\vec{s} \right\}$ and that $D_1\left(sk, \vec{c}'\right) \neq \vec{s}$. In this case, if $g$ is queried on $\left(\vec{m}', \vec{c}'\right)$ before $\mathrm{Decaps}^{\not\bot}$, then $D_1\left(sk, \vec{c}'\right) = \vec{m}'$ is recognised and $\left(\vec{c}', K''\right) \notin \mathcal{L}_D$ for any $K''$. So $g$ adds $\left(\vec{m}', \vec{c}', K \xleftarrow{\$} \mathcal{K}\right)$ to $\mathcal{L}_g$ and adds $\left(\vec{c}', K\right)$ to $\mathcal{L}_D$, giving $\mathrm{Decaps}^{\not\bot}\left(\vec{c}'\right) = K = g\left(\vec{m}', \vec{c}'\right)$.
+
+If however $\mathrm{Decaps}^{\not\bot}$ is queried on $\vec{c}'$ first, then $\left(\vec{c}',K''\right) \notin \mathcal{L}_D$ for any $K''$. So $\mathrm{Decaps}^{\not\bot}$ adds $\left(\vec{c}', K \xleftarrow{\$} \mathcal{K}\right)$ to $\mathcal{L}_D$ and thus $\mathrm{Decaps}^{\not\bot}\left(\vec{c}'\right) = K$. If $g$ is then subsequently queried on $\left(\vec{m}', \vec{c}'\right)$, then $D_1\left(sk, \vec{c}'\right) = \vec{m}'$ is recognised and the entry $\left(\vec{c}',K\right) \in \mathcal{L}_D$ is also recognised, so $g$ adds the tuple $\left(\vec{m}', \vec{c}', K\right)$ to $\mathcal{L}_g$ and returns $K$. This ensures that $g\left(\vec{m}', \vec{c}'\right) = K$.
+
+All of this just goes to show that the view of $A$ is the same in both $G_4$ and $G_5$. So this leads to
+\[
+	P\left( G_5^A \Rightarrow 1 \right) = P\left( G_4^A \Rightarrow 1 \right) .
+\]
+
+Now in game $G_6$, if $\vec{m}$ is the challenge message and $A$ queries $g$ on $\left(\vec{m}, \vec{c}\right)$, then the boolean flag $\mathrm{CHAL}$ is raised and $G_6$ is aborted. Using \cref{lem:DiffLemm} then gives
+\[
+	\abs{P\left( G_6^A \Rightarrow 1 \right) - P\left( G_5^A \Rightarrow 1 \right) } \leq P\left(\mathrm{CHAL}\right).
+\]
+Since $g\left(\vec{m}, \vec{c}\right)$ will never be given to $A$ in $G_6$, $A$ has to guess the bit $b$ in order to win the game giving
+\[
+	P\left( G_6^A \right) = \frac{1}{2}.
+\]
+
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$B^{\mathrm{PCO}\left(\bullet,\bullet\right)}\left(pk', \vec{c}\right)$}
+		\label{alg:BForU}
+		\begin{algorithmic}
+			\State $K^{\dagger} \xleftarrow{\$} \mathcal{K}$
+			\State $\vec{s} \xleftarrow{\$} \mathcal{M}$
+			\State $b' \leftarrow A^{\mathrm{Decaps}^{\not\bot}\left(\bullet\right), g \left(\bullet, \bullet\right)}\left(pk', \vec{c}, K^{\dagger}\right)$
+			\If{$\exists \left(\vec{m}', \vec{c}'' K'\right) \in \mathcal{L}_g \ : \ \mathrm{PCO}\left(\vec{m}', \vec{c}\right) = 1$}
+				\State \textbf{Return} $\vec{m}'$
+			\Else
+				\State \textbf{Abort}
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+\begin{center}
+\begin{minipage}[ht!]{0.6\textwidth}
+	\begin{algorithm}[H]
+		\centering
+		\caption{$g\left(\vec{m}'', \vec{c}'\right)$}
+		\label{alg:gForB}
+		\begin{algorithmic}
+			\If{$\exists K \ : \ \left(\vec{m}'', \vec{c}', K\right) \in \mathcal{L}_g$}
+				\State \textbf{Return} $K$
+			\EndIf
+			\State $K \xleftarrow{\$} \mathcal{K}$
+			\If{$\vec{m}'' = \vec{s}$}
+				\State \textbf{Abort}
+			\EndIf
+			\If{$\mathrm{PCO}\left(\vec{m}'', \vec{c}'\right) = 1$}
+				\If{$\exists K' \ : \ \left(\vec{c}', K'\right) \in \mathcal{L}_D$}
+					\State $K = K'$
+				\Else
+					\State $\mathcal{L}_D = \mathcal{L}_D \cup \left\{ \left(\vec{c}', K\right) \right\}$
+				\EndIf
+			\EndIf
+			\State $\mathcal{L}_g = \mathcal{L}_g \cup \left\{ \left(\vec{m}'', \vec{c}', K\right) \right\}$
+			\State \textbf{Return} $K$
+		\end{algorithmic}
+	\end{algorithm}
+\end{minipage}
+\end{center}
+
+Suppose now that the $\mathrm{OW-PCA}$ security adversary $B$ for $\Pi_1$ is built as in \cref{alg:BForU,alg:gForB}, with $B$ having access to a plaintext checking oracle, $\mathrm{PCO}\left(\bullet, \bullet\right)$ and $\mathrm{Decaps}^{\not\bot}\left(\bullet\right)$ defined as in $G_6$. Suppose furthermore that the running time of $B$ is about that of $A$. This adversary $B$ then perfectly simulates $G_6$ for $A$. If the flag $\mathrm{CHAL}$ is raised, then $A$ must have queried $g$ on $\left(\vec{m}, \vec{c}\right)$ and $\left(\vec{m}, \vec{c}, K'\right) \in \mathcal{L}_g$ for some $K'$. $A$ will then return $\vec{m}' = \vec{m}$ and win the $\mathrm{OW-PCA}$ game. So
+\[
+	P\left(\mathrm{CHAL}\right) = Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right).
+\]
+
+Now collecting the probabilities deduced from the games of this section yields
+\begin{equation}
+\label{eq:boundFromthm34inHHK}
+	Adv_{\mathrm{KEM}^{\not\bot}}^{\mathrm{CCA}2}\left(A\right) \leq \frac{q_g}{\size{\mathcal{M}}} + Adv_{\Pi_1}^{\mathrm{OW-PCA}}\left(B\right),
+\end{equation}
+proving the following theorem.
+\begin{thm}
+	Let $\Pi_1$ be a public key cryptosystem that is $\mathrm{OW-PCA}$, $g$ be a hash function and let $\mathrm{KEM}^{\not\bot} = U^{\not\bot}\left(\Pi_1, g\right)$ be a key encapsulation mechanism, then $\mathrm{KEM}^{\not\bot}$ is \emph{IND-}$\mathrm{CCA}2$.
+\end{thm}
+
+
+
+\section{Transforming The Original McEliece Public Key Cryptosystem}
+\label{sec:traOrgMcEPKC}
+
+The goal of this section is to apply the $T$- and then the $U^{\not\bot}$-transformation to the McEliece PKC in order to achieve IND-$\mathrm{CCA}2$ security in the random oracle model.
+
+Before doing so however, some things has to be set straight. Firstly, the security reduction from \cref{subsec:ImpPCAFroCPA} only works if the McEliece PKC is $\mathrm{OW-CPA}$. Note that if some probabilistic polynomial time adversary $A$ were to attempt to win the game $\mathrm{OW-CPA}$ played on the McEliece PKC, then it would have to solve \cref{prob:mceliece}, but doing so and winning with non-negligible probability would contradict \cref{conj:McEProbIsHard}.
+
+Secondly there's the question of the hash function to be used. Remember that the underlying Goppa code of the McEliece PKC can only correct up to  $\left\lfloor \frac{n-1}{2} \right\rfloor$ errors. So a hash function that takes a message as input and outputs a pseudorandom vector of weight at most $t$ is needed (it needs to be pseudorandom, so as to make sure that the vector $\vec{z}$ used for encryption is not easily guessed). The hash function also needs to be defined for all possible input messages and preferably also be easy to sample. Are such hash functions even possible? Do they even exist?
+
+
+
+\subsection{The Hash Functions}
+\label{subsec:TheHashFunctionsInChap5}
+
+As for the hash function used in the $T$-transformation, \cite{BP} provides a hash function that is exactly what is needed (they do however note that there are other such functions). The authors claim that they built it so that it takes time linear in the length of the input message to compute the digest, it is defined on all possible messages, it is injective and it provides digests of a constant weight and the digest has an entropy higher than or equal to that of the input message. If this last claim is true, then if any adversary was to try to guess the error vector $\vec{z}$, then they might as well just try to guess the message itself. The only downside to using this function is that the authors seem to be requiring that $2^k < \binom{n}{t}$ (they do themselves point out that there are other such functions that do not have this potential problem).
+
+As for the $U^{\not\bot}$ all that is needed is a collision intractable hash function (so that it is one-way) that outputs messages of length $k$, so as to make sure that the output is within the message space of the McEliece PKC (with $k$ being as in the original McEliece PKC). Fortunately such hash functions are well-known and have been so for quite some time now.
+
+
+
+\subsection{Applying The Transformations}
+
+Having solved the pertaining issues to the application of the transformations $T$ and $U^{\not\bot}$ to the McEliece PKC, I will now move on to show how the $\mathrm{CCA}2$ secure converted McEliece PKC looks like. Notice that after applying firstly the $T$- and then the $U^{\not\bot}$ transformation, this is actually a key encapsulation mechanism now.
+
+\begin{description}
+	\item[System Parameters:] $n,t \in \N$ where $t \leq \left\lfloor \frac{n-1}{2} \right\rfloor$.
+	\item[Key Generation:] Given the parameters $n$, $t$ generate the following matrices:
+		\\~\\
+		$G$: $k \times n$ generator matrix of an irreducible binary $\left[n,k\right]$ Goppa code $\mathcal{G}$ which can correct up to $t$ errors.\\
+		$\mathrm{S}$: $k \times k$ random binary non-singular matrix.\\
+		$\mathrm{P}$: $n \times n$ random permutation matrix.
+		\\~\\
+		Then compute the $k \times n$ matrix $G' = \mathrm{S}G\mathrm{P}$,\\
+		build a hashing algorithm $h$ that outputs bit strings of length $n$ and (Hamming) weight $t$ (see e.g. \cite{BP}),\\
+		choose a collision intractable hash function $g$ that takes input of arbitrary length and gives an output of length $k$ and\\
+		choose a uniformly random message $\vec{s}$ of length $k$.
+	\item[Public Key:] $\left(G', t, h, g\right)$.
+	\item[Private Key:] $\left(S, D_{\mathcal{G}}, P, \vec{s}\right)$ where $D_{\mathcal{G}}$ is an efficient decoding algorithm for $\mathcal{G}$ (see e.g. \cref{alg:errCorrIrrBinGoppa}).
+	\item[Encapsulation:] Start by encrypting the message $\vec{m} \in \left\{ 0,1 \right\}^k$. This is done by computing $h\left(\vec{m}\right) = \vec{z} \in \left\{ 0,1 \right\}^n$ and then computing the ciphertext
+		\[
+			\vec{c} = \vec{m} G' \xor \vec{z}.
+		\]
+	Then compute the key
+		\[
+			K = g\left(\vec{m}, \vec{c}\right).
+		\]
+	\item[Decapsulation:] Upon receiving $\vec{c}$, start off by decrypting $\vec{c}$. This is done by calculating
+		\[
+			\vec{c}\mathrm{P}^{-1} = \vec{m}'\mathrm{S}G \xor \vec{z}\mathrm{P}^{-1}.
+		\]
+		Then apply the decoding algorithm $D_{\mathcal{G}}$ to this. Because $\vec{c}\mathrm{P}^{-1}$ should have a hamming distance of $t$ to the Goppa code, the codeword obtained should be
+		\[
+			\vec{m}'\mathrm{S}G = D_{\mathcal{G}} \left( \vec{c}\mathrm{P}^{-1} \right).
+		\]
+		Now one can now compute the plaintext $\vec{m}'$ as
+		\[
+			\vec{m}' = \left( \vec{m}'\mathrm{S}G \right)  G^{-1} \mathrm{S}^{-1}.
+		\]
+		Then compute
+		\[
+			\vec{c}' = \vec{m}' G' \xor h\left(\vec{m}'\right).
+		\]
+		If $\vec{m}'$ is not a valid plaintext or if $\vec{c}' \neq \vec{c}$, then decryption has failed.\\
+		If decryption succeeds however, then compute
+		\[
+			K' = g\left(\vec{m}', \vec{c}\right).
+		\]
+		Otherwise compute
+		\[
+			K' = g\left(\vec{s}, \vec{c}\right).
+		\]
+\end{description}
+
+\subsubsection{Security After Applying Both Transforms In Succession}
+\label{subsec:SecAftAppBotTraInSuc}
+
+In \cite{HHK} there also is a discussion of what the security of the transformed cryptosystem is like. Here I will rehash this in terms of applying the transformations to the McEliece PKC.
+
+Denote the original McEliece PKC as $\mathrm{MCE}$. Now that both transforms have been applied, one ends up with the key encapsulation mechanism
+\[
+	\mathrm{KEM}^{\not\bot} = \mathrm{FO}^{\not\bot}\left(\mathrm{MCE}, h, g\right) = U^{\not\bot}\left(T\left(\mathrm{MCE},h\right),g\right) = \left(\mathrm{Gen}^{\not\bot}, \mathrm{Encaps}, \mathrm{Decaps}^{\not\bot}\right)
+\]
+as described above.
+
+Let $B$ be a $\mathrm{CCA}2$ adversary against $\mathrm{KEM}^{\not\bot}$, $A$ be an adversary against the $\mathrm{OW-CPA}$ security of $T\left(\mathrm{MCE},h\right)$ and let $q_{\mathrm{RO}} = q_h + q_g$ denote the total number of queries that $B$ sends to the random oracles $h$ and $g$. Combining \cref{eq:boundFromThm31InHHK,eq:boundFromthm34inHHK} then gives
+\begin{align}
+	Adv_{\mathrm{MCE}}^{\mathrm{CCA}2}\left(B\right) &\leq q_{\mathrm{RO}} \cdot \delta + \frac{2 q_{\mathrm{RO}}}{\size{\mathcal{M}}} + 2 q_{\mathrm{RO}} \cdot Adv_{\mathrm{MCE}}^{\mathrm{OW-CPA}}\left(A\right).\label{eq:eq1}
+\end{align}
+
+Remember from the discussion in \cref{subsec:secTerSysPar}, that security can be stated in terms of only $k$. One could choose a number $\kappa \in \N$ and let that be the security parameter. This $\kappa$ could be many things, but for now let it denote the bit length of $k$. The phrase ``$\kappa$ bits of security'' then actually makes sense. Suppose adversary $B$ runs in time $t\left(B\right)$ and has advantage $Adv\left(B\right)$. ``$\kappa$ bits of security'' would then mean that
+\[
+	\frac{t\left(B\right))}{Adv\left(B\right)} \geq 2^{\kappa}.
+\]
+
+Some recommendations on the bounds of $\delta$ and $\size{\mathcal{M}}$ can then be made for the security bound in \cref{eq:eq1}. These can be seen in \cref{tab:recBouForSecOfKEM}.
+\begin{table}[htb!]
+\centering
+\begin{tabular}{cc}
+	\hline
+	Term in concrete bound & Minimal requirement for $\kappa$ bits of security\\
+	\hline
+	$q_{\mathrm{RO}} \cdot \delta$ & $\delta \leq 2^{- \kappa}$\\
+	$\frac{q_{\mathrm{RO}}}{\size{\mathcal{M}}}$ & $\size{\mathcal{M}} \geq 2^{\kappa}$
+\end{tabular}
+\caption{Recommended bounds for security of $\mathrm{KEM}^{\not\bot}$}
+\label{tab:recBouForSecOfKEM}
+\end{table}
+
+If the error vector used for encryption in the original McEliece PKC is not of a too high weight (such that error correction is actually possible) as above, then $\delta$ could be chosen to be $0$, because correct decryption would always be possible. If not $0$, then at least a number $\epsilon \in \R$ that is arbitrarily close to it, $0 < \epsilon \ll 1$. In this case, for the first row in \cref{tab:recBouForSecOfKEM} one has
+\[
+	\frac{t\left(B\right)}{Adv\left(B\right)} \geq \frac{q_{\mathrm{RO}}}{q_{\mathrm{RO}} \cdot \delta} = \frac{1}{\delta} \geq 2^{\kappa}.
+\]
+This is indeed true, since $\delta$ can just be chosen as $2^{- \kappa}$ (avoiding $\delta = 0$ --- even though it is entirely possible --- so as to make sure that no expression is undefined. Notice however that as $\delta$ approaches $0$, $\frac{1}{\delta}$ approaches infinity, making completely sure that is is above the bound of $2^{\kappa}$).
+
+As for the the other bound in \cref{tab:recBouForSecOfKEM}, all that is needed is a large enough plaintext space. This can safely be assumed, since \cref{eq:kInMceliece} implies that $k$ can be chosen to be arbitrarily large.
+
+All of this was actually just to show that an arbitrary level of security can still be reached, after the application of the transforms as above -- just as in the original McEliece PKC.
+

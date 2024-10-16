@@ -1,0 +1,24 @@
+%% ============================================================================
+%%
+%%  Speciale / Master's thesis
+%%
+%%  Author: Rune Thorsen
+%%
+%%  Introduction
+%% ============================================================================
+
+\chapter{Introduction}
+\label{chap:intro}
+
+Suppose you have to send a message to your friend at the other part of town, but your mutual enemy works at the post office. You do not want this person to be able to steam your letters and read them. In this scenario you could send a manual to your friend, letting them know how to build a box and a padlock for the box. This box could then contain the message that you wish your friend to send to you. Your friend could build the box and the padlock and then put a message in the box and use the padlock to seal the box. The box is then sent to you and if you are smart, you would have designed the padlock such that only you know to build the key for it (even in the case that your friend and your enemy also have the instructions on how the padlock is built). This means that your enemy will not be able to sniff your messages that you friend sends to you and your friend would have to commit to the message, that he or she puts in the box. This is essentially what public key encryption is. Your friend could then send you instructions on how to build another padlock alongside how to make the key for it. Using this new padlock, you could send messages back and forth but only the two of you will have the key for unlocking the messages. This is the idea behind symmetric encryption schemes and is analogous to how public key encryption schemes are used in real life.
+
+This thesis is then about one of the oldest public key encryption schemes, namely the McEliece public key encryption scheme. It has not yet been broken in a classical- or a quantum sense and so it is of great interest to the cryptographic community, as it seems that the emergence of general quantum computers is almost imminent.
+
+Before having a look at that though, I will have to go over some coding theory and also lay out Goppa codes -- in particular irreducible binary Goppa codes, as these are the ones that will be used for building the cryptosystem.
+
+The cryptosystem does not however live up to modern standards of security of public key cryptosystems. This is not because it is old and outdated in a sense that current technology has surpassed it, but simply because it never did and back in the day it was most likely not something most people concerned themselves with. As I pointed out earlier, this was one of the oldest public key cryptosystems. This mistake can be rectified when using it for exchanging keys -- even in the quantum sense -- and I will show how.
+
+Please note that all relevant notation will be introduced when necessary. The reader should notice that some of it might be overloaded, but whenever in doubt, please take context into account. Not every single piece of notation is formally introduced though. This is because there are several basic concepts of mathematics and computer science that I will presuppose that the reader has knowledge of and thus also know the common notation of.
+
+As for the concepts that I presuppose that the reader is familiar with, these include some abstract algebra (including linear algebra), combinatorics, probability theory and complexity theory. The goal is that if a person with a bachelor's degree in computer science has had a course in abstract algebra (and maybe also one in cryptology), he or she would be able to follow along.
+

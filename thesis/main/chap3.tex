@@ -1,0 +1,203 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 3: The orginal McEliece cryptosystem
+%% ============================================================================
+
+\chapter{The Original McEliece Cryptosystem}
+\label{chap:origmceliece}
+
+In 1978 R. J. McEliece was the first to propose a public key cryptosystem based on coding theory. This is in contrast to more well known encryption schemes such as RSA, that is based on the integer factorisation problem. More specifically, McEliece proposed using irreducible binary Goppa codes \cite{mceliece}. Given how early this proposal was made, it is thus one of the oldest asymmetric cryptosystems and remains yet to be broken, provided one is careful in choosing the security parameters used. The advantage of code-based cryptography lies in faster en- and decryption, so the question now is; why did it not gain as much traction as RSA or other public key cryptosystems based on number-theoretical problems? Well the answer lies in the big keys used. Nowadays this is not much of an issue though, since storage capacity has increases vastly since 1978 and so has computing power. Thus the McEliece public key cryptosystem has now become quite practical.
+
+Having introduced linear codes in \cref{sec:lc} and then also irreducible binary Goppa codes in \cref{sec:defGoppa} alongside its decoding in \cref{sec:decGoppa} I am now finally ready to introduce the McEliece public key cryptosystem in \cref{sec:descOrigMceliece} and the security of it in \cref{sec:secSysParOMC}. First however I will have to introduce just a bit more coding theory in \cref{sec:codTheProbs}, so that it becomes apparent where the idea behind the cryptosystem comes from.
+
+
+
+\section{Some Problems From Coding Theory}
+\label{sec:codTheProbs}
+
+In this section I will mostly follow \cite{EOS} and define some problems related to linear codes. This will serve as a preparation for the discussion of the McEliece cryptosystem.
+
+First off a look at a problem that has been researched in the past. It is the problem of decoding a general linear code. But before looking at that, a clarification about notational matters need to be disclosed.
+So let $C$ be an arbitrary $\left[n,k\right]$ linear code over the field $\F$ with $\vec{y} \in \F^n$ as defined in \cref{chap:lecc}. By definition this code will have a generator matrix, $G$, and parity check matrix $H$. Let also $d$ denote a distance function (as usual I will be using the Hamming distance from \cref{def:hamdhamw} -- though other notions of distance do exist) and let $w$ denote the hamming weight function from \cref{def:hamdhamw}.
+
+The problem is then as follows.
+\begin{prob}[General Decoding Problem For Linear Codes]
+\label{prob:genDecProb}
+	Find $\vec{x} \in C$ such that $d\left(\vec{y},\vec{x}\right)$ is minimal.
+\end{prob}
+
+Now let $d_{\min}$ denote the minimum distance of the linear code $C$ and let $\vec{e}$ be an error vector of weight $w\left(\vec{e}\right) \leq t = \left\lfloor \frac{d_{\min} - 1}{2} \right\rfloor$. If $\vec{x} \in C$ then there must exist a unique solution to the general decoding problem for $\vec{y} = \vec{x} + \vec{e}$. In this case, $C$ will be a $t$-error-correcting-code.
+
+Now Berlekamp et al. managed to prove that \cref{prob:genDecProb} is actually NP-hard \cite{BMT}, but Vardy later improved upon this leading to the following result.
+\begin{thm}
+\label{th:genDecIsNPComplete}
+	\Cref{prob:genDecProb} is NP-complete.
+	\begin{Proof}
+		See \cite{vardy}.
+	\end{Proof}
+\end{thm}
+
+One could also easily imagine another problem regarding finding codewords in a linear code of a particular weight. This is stated here.
+\begin{prob}[Subspace Weights]
+\label{prob:subW}
+	Let $\mathbf{w} \in \N$. Find $\vec{x} \in C$ such that $d\left(\vec{0}, \vec{x}\right) = \mathbf{w}$.
+\end{prob}
+
+The hope here is that a cryptosystem can be built upon these problems. For \cref{prob:genDecProb} this is not too hard to imagine, given \cref{th:genDecIsNPComplete}. For \cref{prob:subW} it follows from the following result.
+\begin{thm}
+\label{th:subWIsNPHard}
+	\Cref{prob:subW} is NP-Hard.
+	\begin{Proof}
+		See \cite{BMT}.
+	\end{Proof}
+\end{thm}
+
+There is just one more problem that might be of interest based upon the equivalence of codes. Such a notion was briefly mentioned in \cref{sec:lc} but here I will give a more proper introduction to it, starting with permutation equivalence. Remember that for any $\vec{x} \in C$, $\vec{x}$ is written as an $n$-tupel: $\vec{x} = \left(x_0, \cdots, x_{n-1}\right)$ and then a \emph{permutation}, denoted $\pi$, of the \emph{permutation group} $S_n$, will just shuffle around the entries in $\vec{x}$ according to some fixed rule. Denote by $\pi^{-1}$ the inverse permutation.
+\begin{defi}[Permutation Equivalent]
+\label{def:permEquiv}
+	Two $\left[n,k\right]$ codes, $C$ and $C'$, over a field, $\F$, are called \emph{permutation equivalent} if there exists a permutation, $\pi$, of the permutation group $S_n$ over $n$ elements such that
+	\begin{equation*}
+		C' = \pi \left(C\right) = \left\{ \pi^{-1}\left(\vec{x}\right) \ \middle\vert \ \vec{x} \in C \right\}.
+	\end{equation*}
+\end{defi}
+The subgroup of $S_n$ that keeps $C$ fixed is then called $Aut\left(C\right)$.
+
+The more formal version of the definition of equivalence is then ready to be introduced. Let $\bullet \circ \bullet$ denote the entry wise vector multiplication, $\phi$ be a field automorphism of the field $\F$ and $\varphi$ be the function that applies $\phi$ to all entries in a vector.
+\begin{defi}[Equivalence]
+\label{def:equiv}
+	Two $\left[n,k\right]$ codes, $C$ and $C'$, over a field, $\F$, are said to be \emph{equivalent} if there exists a permutation, $\pi$, of the permutation group $S_n$ over $n$, an $n$-tupel $\vec{a} = \left(a_0, \cdots, a_{n-1}\right) \in \F^n$ and a field automorphism, $\phi$ of $\F$ such that
+	\begin{equation*}
+		\vec{x} \in C \Leftrightarrow \varphi\left(\pi^{-1}\left(\vec{a}\right) \circ \pi^{-1}\left(\vec{x}\right)\right) \in C'.
+	\end{equation*}
+\end{defi}
+Notice how in the case where $\F = \F_2$ the definition of permutation equivalency is the same as the definition of equivalency.
+
+Let the two codes $C$ and $C'$ have generator matrices $G$ and $G'$ respectively. Now the final problem of this section can be introduced.
+\begin{prob}
+	Given two generator matrices $G$ and $G'$, decide if the codes generated by the matrices are permutation equivalent or not.
+\end{prob}
+
+
+
+\section{Description Of The McEliece Cryptosystem}
+\label{sec:descOrigMceliece}
+
+As mentioned earlier in this chapter, the McEliece cryptosystem is based upon problems from coding theory. To be more precise, it is based upon the decoding problem of a large linear code \cite{KI}. This is a special case of \cref{prob:genDecProb} and the next section, I will reveal just how this problem is used.
+
+In \cite{mceliece} the cryptosystem is first proposed and I will describe it here. Notice that it uses irreducible binary Goppa codes, but in \cite[p. 6]{EOS} it is pointed out that ``any subclass of the class of alternant codes could be used. However, it might not reach the desired security''. Goppa codes are a class of alternant codes, but as the quote above states, one still has to be careful when trying to build one for use in the McEliece cryptosystem -- in particular one should just stick to the irreducible binary Goppa codes introduced in \cref{subsec:howToIrrBinGoppa}. I will get back to this in the next chapter.
+
+Just as with any public key cryptosystem, this cryptosystem utilises a trapdoor function. In this case the trapdoor will be the knowledge of the used Goppa polynomial \cite{EOS}.
+
+Now the cryptosystem can be defined as follows.
+\begin{description}
+	\item[System Parameters:] $n, t \in \N$ where $t < n$.
+	\item[Key Generation:] Given the parameters $n$, $t$ generate the following matrices:
+	\\~\\
+		$G$: $k \times n$ generator matrix of an irreducible binary $\left[n,k\right]$ Goppa code $\mathcal{G}$ which can correct up to $t$ errors.\\
+		$\mathrm{S}$: $k \times k$ random binary non-singular matrix.\\
+		$\mathrm{P}$: $n \times n$ random permutation matrix.
+		\\~\\
+		Then compute the $k \times n$ matrix $G' = \mathrm{S}G\mathrm{P}$.
+	\item[Public Key:] $\left(G',t\right)$.
+	\item[Private Key:] $\left(\mathrm{S}, D_{\mathcal{G}}, \mathrm{P}\right)$ where $D_{\mathcal{G}}$ is an efficient decoding algorithm for $\mathcal{G}$ (see e.g. \cref{alg:errCorrIrrBinGoppa}).
+	\item[Encryption:] To encrypt a plaintext $\vec{m} \in \left\{ 0,1 \right\} ^k$ choose a vector $\vec{z} \in \left\{ 0,1 \right\} ^n$ of weight $t$ randomly and compute the ciphertext $\vec{c}$ in the following way:
+		\begin{equation}
+		\label{eq:mcEEncryption}
+			\vec{c} = \vec{m}G' \xor \vec{z}.
+		\end{equation}
+	\item[Decryption:] To decrypt a ciphertext $\vec{c}$ start by calculating
+		\[
+			\vec{c}\mathrm{P}^{-1} = \vec{m}\mathrm{S}G \xor \vec{z}\mathrm{P}^{-1}.
+		\]
+		Then apply the decoding algorithm $D_{\mathcal{G}}$ to this. Because $\vec{c}\mathrm{P}^{-1}$ has a hamming distance of $t$ to the Goppa code, the codeword obtained is
+		\[
+			\vec{m}\mathrm{S}G = D_{\mathcal{G}} \left( \vec{c}\mathrm{P}^{-1} \right).
+		\]
+		Now one can now compute the plaintext $\vec{m}$ as
+		\[
+			\vec{m} = \left( \vec{m}\mathrm{S}G \right)  G^{-1} \mathrm{S}^{-1}.
+		\]
+\end{description}
+
+
+\section{Security- And System Parameters Of The Original McEliece Cryptosystem}
+\label{sec:secSysParOMC}
+
+In this section I will first introduce a basic concept of information theory in \cref{subsec:ShaEnt} and continue on with discussing how this can be used to let the security of the McEliece cryptosystem be expressed by a single system parameter in \cref{subsec:secTerSysPar}.
+
+
+\subsection{Shannon Entropy}
+\label{subsec:ShaEnt}
+
+Here I will just quickly define something called entropy, that Shannon introduced in 1948 \cite{shannon}. Let $\left[ \bullet , \bullet \right]$ denote a \emph{closed interval}. Let also $A$ be a discrete random variable, that assumes values in the alphabet $\mathcal{A}$ and is distributed according to some probability distribution $P: \mathcal{A} \rightarrow \left[0,1\right]$.
+\begin{defi}[Shannon Entropy]
+\label{def:shannonEntropy}
+	The \emph{entropy} (or \emph{Shannon entropy}) of a variable is given by
+	\[
+		H\left(A\right) = \sum\limits_{a \in \mathcal{A}} P\left(a\right) \log \left( \frac{1}{p\left(x\right)} \right).
+	\]
+\end{defi}
+When dealing with bit strings, one would use base $2$ for the logarithm in \cref{def:shannonEntropy}. Note that the entropy can be interpreted as the level of uncertainty as to the possible outcome of the variable $A$ (this is also where the idea and name comes from -- it is simply borrowed from statistical physics).
+
+
+\subsection{Security In Terms Of The System Parameters}
+\label{subsec:secTerSysPar}
+
+A question that might arise is, why would one possibly consider the cryptosystem just described in \cref{sec:descOrigMceliece} as secure? Well, have a look at the following problem.
+\begin{prob}[McEliece Problem]
+\label{prob:mceliece}
+	Suppose you have a McEliece public key $\left(G',t\right)$ where $G' \in \left\{ 0, 1 \right\} ^{k \times n}$ and a ciphertext $\vec{c} \in \left\{ 0,1 \right\} ^n$. Now find the unique message $\vec{m} \in \left\{ 0,1 \right\}^k$ such that $d\left(\vec{m}G', \vec{c}\right) = t$.
+\end{prob}
+
+Clearly if one is able to solve \cref{prob:genDecProb} then one is also able to solve \cref{prob:mceliece}. The reverse cannot be said though. Solving \cref{prob:mceliece} would not solve \cref{prob:genDecProb} except for in a certain class of codes. Notice that the matrix $\mathrm{S}$ disguises the underlying Goppa code as a general linear code. As is usual, one can conjecture the decoding problem for large linear codes to be a hard problem to solve. This means that \cref{prob:mceliece} can also be conjectured to be hard \cite{NMBB,KI,EOS}. Thus the following is obtained
+\begin{conj}
+\label{conj:McEProbIsHard}
+	\Cref{prob:mceliece} is hard to solve.
+\end{conj}
+
+What exactly is meant by \cref{prob:mceliece} being hard to solve then? Well it means that any probabilistic adversary trying to break the cryptosystem by solving \cref{prob:mceliece} in polynomial time will do so with only negligible probability in the security parameter(s). Note that if the used irreducible binary Goppa polynomial $g$ is over the field $\F_{2^m}$ (as is indeed the case) then $m$ can be determined. From \cref{eq:relForK} it follows that
+\begin{equation}
+\label{eq:kInMceliece}	
+	k = n-mt+a
+\end{equation}
+where $a \in \N \cup \left\{ 0 \right\}$. Intuitively in order to achieve maximum entropy on the encrypted message, it will be required that all bits of $\vec{m}G'$ has an equal chance of getting flipped or not flipped. This means that the vector $\vec{z}$ should have Hamming weight $\frac{n}{2}$, but since $w\left(\vec{z}\right) = t$ this means that $t = \left\lfloor \frac{n}{2} \right\rfloor$ since $t$ must be a natural number. This value for $t$ does however not satisfy $2t + 1 \leq n$, which is needed in order to provide adequate error correction. The easy solution to this is to just let $t$ be as close to this bound as possible, so $t$ is then determined by
+\begin{equation}
+\label{eq:tInMceliece}
+	t = \left\lfloor \frac{n-1}{2} \right\rfloor .
+\end{equation}
+Now \cref{eq:kInMceliece} becomes
+\[
+	k = n - \left\lfloor \frac{mn-m}{2} \right\rfloor + a
+\]
+and if $n$ is chosen to be maximal, then since $\size{\F_{2^m}} = 2^m$
+\[
+	n = 2^m
+\]
+and
+\[
+	k = 2^m - \left\lfloor \frac{m 2^m - m}{2} \right\rfloor + a.
+\]
+For some fixed $m$, $k$ is then the only free variable and can be chosen arbitrarily as some natural number that is only bounded below by $2^m - \left\lfloor \frac{m 2^m - m}{2} \right\rfloor$. All of this taken together shows that $k$ can be used as the sole security parameter of the original McEliece public key cryptosystem (again provided that $m$ is kept fixed).
+
+So what is now meant by the probability of a successful attack being negligible in $k$? Well it means that the probability of a successful attack is inversely proportional to some function in $k$ that grows faster than any polynomial in $k$ (a polynomial because it is assumed that the adversary works in polynomial time). This in turn implies that as $k$ grows larger, the probability of a successful attack asymptotically approaches $0$ faster than the multiplicative inverse of any polynomial in $k$. Allow me to formally introduce this notion of a negligible probability, since it will also be useful in later discussions.
+\begin{defi}[Negligible Probability]
+\label{def:negProb}
+	Let $y \in \N$ be a natural number, $\epsilon\left(y\right)$ be a probability expressed in terms of the parameter $y$ and $p\left(y\right)$ be any polynomial in the same parameter $y$. If
+	\[
+		\epsilon\left(y\right) \leq \frac{1}{p\left(y\right)}
+	\]
+	for all large enough $y$, then the probability $\epsilon\left(y\right)$ is said to be \emph{negligible in $y$}.
+\end{defi}
+
+This in turn leads to another more formalised version of \cref{conj:McEProbIsHard}.
+\begin{conj}
+\label{conj:solMcEIsNegInN}
+	Any probabilistic polynomial time adversary that tries to solve \cref{prob:mceliece} will do so with only negligible probability in $k$.
+\end{conj}
+
+Notice that $n$ can be allowed to be chosen arbitrarily beneath the upper bound of $2^m$ and $t$ can also be chosen to not satisfy \cref{eq:tInMceliece} $\left(\text{being chosen to be below }\left\lfloor \frac{n - 1}{2} \right\rfloor\right)$ and now the security will have to be stated in terms of not only $k$, but also $n$ and $t$.
+

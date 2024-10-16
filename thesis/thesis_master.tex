@@ -1,0 +1,145 @@
+%% ============================================================================
+%%
+%%  Speciale / Master's thesis
+%%
+%%  Author: Rune Thorsen
+%%
+%%  IMPORTANT: Compile with pdfLaTeX+biber !
+%%
+%%  Remarks:
+%%  - Needs to be executed with '--shell-escape' if the minted-package is used!
+%%
+%%  Original template/preamble: Jakob Lysgaard Rørsted (Mosumgaard)
+%% ============================================================================
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Preamble and input control
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+% Use memoir!!!
+\documentclass[%
+final,           % Un-comment when finished (to e.g. remove watermark)
+11pt,
+openright,
+twoside,
+%danish,
+british,
+a4paper
+]{memoir}
+
+% Global definition: Name of the project (e.g. for the headers)
+% NOTE: The text of the front page is defined manually!
+\newcommand{\projecttitle}{Exchanging Keys Using McEliece}
+\newcommand{\projecttitledanish}{Udveksling Af Nøgler Ved Brug Af McEliece}
+
+% Read the actual preamble
+\input{preamble}
+
+% Uncomment to include all  -->  Ugly hack, I know !
+\renewcommand\includeonly[1]{}
+
+% Which files to compile
+\includeonly{%
+  front/frontpages,
+  front/preface,
+  front/intro,
+  main/chap1,
+  main/chap2,
+  main/chap3,
+  main/chap4,
+  main/chap4,
+  main/chap5,
+  main/chap6,
+  main/chap7
+}
+
+% Make the fixme-package silent to avoid cluttering of the terminal output
+% --> Comment-out to see the FiXme Summary as well as individual logs of
+%     error/warning/fatal notes
+% \fxsetup{silent}
+
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Contents
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\begin{document}
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Frontmatter (before the actual content)  [feel free to remove stuff]
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\frontmatter
+
+% Frontpage and abstract (this will set the page number to count all pages)
+% If you want to let the page counter reset, go to line 71 in the file.
+\include{front/frontpages}
+
+% List of fixme-notes -- REMEMBER TO REMOVE!
+%  --> When removed, things will end on the correct pages
+%\listoffixmes
+
+% Preface (Danish: Forord)
+% [comment-out if not required]
+\include{front/preface}
+
+% Table of contents
+\clearpage
+\tableofcontents*
+
+% Introduction (as an actual chapter, but *without* a number)
+% [comment-out if not required]
+\include{front/intro}
+
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Mainmatter (the actual content)
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\mainmatter
+
+% Here the chapters are organised in individual files, but in the same folder.
+% Another option is to make one folder per chapter. This can e.g. be useful if
+% each chapter contains many figures.
+
+% Chapter 1
+\include{main/chap1}
+
+% Chapter 2
+\include{main/chap2}
+
+% Chapter 3
+\include{main/chap3}
+
+% Chapter 4
+\include{main/chap4}
+
+% Chapter 5
+\include{main/chap5}
+
+% Chapter 6
+\include{main/chap6}
+
+% Chapter 7
+\include{main/chap7}
+
+
+% ~~~~~~~~~~~~
+% Bibliography
+% ~~~~~~~~~~~~
+\clearpage
+
+% Change the sorting of references to NAME-YEAR-TITLE (see preamble for details)
+\begin{refcontext}[sorting=nyt]
+  % Standard bibliography
+  \raggedyright[4em] \printbibliography
+
+  % With custom title (activate in preamble)
+  % \raggedyright[4em] \printbibliography[heading=memoirbib]
+\end{refcontext}
+
+
+% ~~~~~~~~~~
+% Appendices
+% ~~~~~~~~~~
+%\appendix
+%\include{app/app}
+
+\end{document}

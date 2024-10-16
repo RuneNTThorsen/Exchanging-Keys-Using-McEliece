@@ -1,0 +1,150 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%%
+%%  Author: Rune Thorsen
+%%
+%%  Front page, abstract and colophon
+%%
+%%  Original template: Jakob Lysgaard Rørsted (Mosumgaard)
+%% ============================================================================
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% The title page and verso (colophon)
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+% Get font-info
+\makeatletter
+\edef\fontandleading{\@memptsize.0/\the\baselineskip}
+\makeatother
+
+\begin{titlingpage}
+
+  % The actual front page (corrected for margin displacement)
+  \newlength{\frontpagecorrection}
+  \calccentering{\frontpagecorrection}
+  \begin{adjustwidth*}{\frontpagecorrection-2cm}{-\frontpagecorrection-2cm}
+
+    \centering
+    \scshape
+
+    {\fontsize{22pt}{26pt}\selectfont\spread{Exchanging Keys Using McEliece}} \par
+
+    \vspace{0.5cm}
+
+    {\fontsize{14pt}{18pt}\selectfont\spread{Udveksling Af N{\o}gler Ved Brug Af McEliece}} \par
+
+    \vspace{2cm}
+
+    \includegraphics[height=7cm]{front/segla1b}
+
+    \vspace{2cm}
+
+    \fontsize{16pt}{20pt}\selectfont
+    \spread{Rune N. T. Thorsen}\par
+    \spread{201505509 - AU522740}\par
+
+    \bigskip
+
+    \fontsize{14pt}{18pt}\selectfont
+    \spread{Master's Thesis in Computer Science}\par
+    \spread{June 2023}\par
+
+    \vfill
+
+    Supervisor: \par
+    \href{https://pure.au.dk/portal/da/persons/ivan-bjerre-damgaard(70603eb5-52fd-41e3-8752-15d803c3af5c).html}{Ivan Bjerre Damgård} \par
+
+    \vfill
+
+    \fontsize{12pt}{14.5pt}\selectfont
+    \href{https://www.cs.au.dk/}{Department of Computer Science}\par
+    \href{https://www.au.dk/}{Aarhus University}
+
+  \end{adjustwidth*}
+
+  % Colophon
+  \newpage
+  \begin{adjustwidth*}{\frontpagecorrection}{-\frontpagecorrection}
+    \thispagestyle{empty}
+    \strut\vfill
+    {
+      \setlength{\parindent}{0pt}
+      \addtolength{\parskip}{.6em}
+
+      \begin{center}
+        \bfseries\sffamily Colophon
+      \end{center}
+
+      \small
+
+      \textsl{\projecttitle}
+
+      {--- \textsl{\projecttitledanish}}
+
+      \smallskip
+
+      Master's thesis by Rune N. T. Thorsen. Written under supervision by Professor Damgård,
+      Department of Computer Science, Aarhus University.
+
+      Typeset by the author with \LaTeX{} and the \textsf{memoir} document class,
+      using Linux Libertine and Linux Biolinum {\fontandleading}.
+
+      %Printed at Aarhus University
+    }
+  \end{adjustwidth*}
+\end{titlingpage}
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Dedication
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\thispagestyle{chapter}
+
+\begin{multiabstract}{Dedication}
+\begin{center} This work is dedicated to my father who was the first to spark my interest in computers and tell me about the world of cryptology. \end{center}
+\end{multiabstract}
+
+\clearpage
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Acknowledgements
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\thispagestyle{chapter}
+
+
+\begin{multiabstract}{Acknowledgements}
+\noindent I would like to thank my supervisor Ivan, because he has always been available, able to understand all of my struggles and answer mostly any question that I could throw at him. If not, he would rapidly be able to find an answer. I will also extend my gratitude to Mads for reading through my thesis and making suggestions as to where it could be improved. Alongside Mads I will thank Jakob for helping me with \LaTeX{}. Lastly Magdalena, Michael and Nishka will also have to be thanked for providing a good day whenever I went to my office. I have enjoyed ``going to work'' with these people throughout the semester and especially also the professional sparring that have occurred between us.
+\end{multiabstract}
+
+
+
+\clearpage
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Abstracts
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\thispagestyle{chapter}
+
+% ~~~~~~~~~~~~~~~~~
+% Abstract: English
+% ~~~~~~~~~~~~~~~~~
+\begin{multiabstract}{Abstract (English)} 
+\noindent In this thesis I will introduce linear error correcting codes and in particular Goppa codes with a focus on irreducible binary Goppa codes. These will be used later for building the original McEliece public key cryptosystem. After this, some security concerns of the original cryptosystem will be laid out and in particular, I will show that it does not live up to $\mathrm{CCA}2$ security. This will be rectified in the case where it is to be used for key exchanging, first in the classical sense and then later in the sense of the quantum random oracle model.
+\end{multiabstract}
+
+
+% ~~~~~~~~~~~~~~~~~
+% Abstract: Danish
+% ~~~~~~~~~~~~~~~~~
+\plainbreak{2}
+
+% Switch to Danish
+\selectlanguage{danish}
+\begin{multiabstract}{Resumé (Dansk)}
+\noindent I dette speciale vil jeg introducere lineære fejlkorrigerende koder og i særdeleshed Goppa-koder med et fokus på irreducible binære Goppa-koder. Disse vil blive brugt senere til at bygge det originale McEliece offentlig nøgle kryptosystem. Herefter vil nogle sikkerhedsproblemer for det originale kryptosystem blive udlagt, og jeg vil især vise, at det ikke lever op til $\mathrm{CCA}2$-standarden for sikkerhed. Dette vil blive rettet i forbindelse med nøgleudveksling, først i klassisk forstand og derefter senere i betydningen af den kvantetilfældige orakelmodel.
+\end{multiabstract}
+
+% Reset document language to English
+\selectlanguage{english}
+
+
+

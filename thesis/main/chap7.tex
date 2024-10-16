@@ -1,0 +1,26 @@
+%% ============================================================================
+%%
+%%  Master's thesis
+%% 
+%%  Author: Rune Thorsen
+%%
+%%  Chapter 7: Conclusions And Future Work
+%% ============================================================================
+
+\chapter{Conclusions And Future Work}
+
+The goal of this thesis was to describe the original McEliece PKC and outline a theoretical framework for using it in the face of an attacker -- supposing that the attacker could be either a classical- or a quantum adversary. I then went thoguh how this can be done using the transformations laid out in \cref{chap:achCCA2Sec,chap:betSecInTheQuaRanOraMod}.
+
+As public key cryptosystems are primarily used for key exchange protocols the transformations that I have laid out are used to build a key encapsulation mechanism. Now, CCA2 security is generally considered the standard level of security for public key cryptosystems in modern times and the aforementioned transformations achieves exactly this level of security when applied to the original McEliece PKC as shown in their respective chapters -- unlike the original McEliece PKC, as was shown in \cref{chap:needBetSec}. Thus a way of exchanging keys in a safe way is achieved even under the threat of a quantum adversary.
+
+One of the big takeaways from this thesis is then that the threat of general quantum computers becoming a real concern in the near future is eliminated, unless someone manages to prove that P = NP or someone comes up with a new quantum algorithm that can exploit the nature of the McEliece PKC or cryptographic hash functions.
+
+
+\section{Potential Future Work}
+
+The work has been done using Fujisaki-Okamoto transformations, but there are other ways to achieve CCA2 security that I have not touched upon. These other transformations of the original McEliece PKC could also be tested out in future work. In particular I would like to note that there is a way to transform the cryptosystem so as to not use Goppa codes but another type of linear codes whilst still achieving the desired security in the random oracle model whilst not needing the proposed hash algorithm from \cite{BP} \cite{CHP}. Such methods could (and should) be tested in the future for security in the quantum random oracle model.
+
+Additionally I would like to note that there are even more Fujisaki-Okamoto transformations that I have not yet introduced, but could be worked into a further study of this field. These are for example the original one that Fujisaki and Okamoto suggested in 1999. There are also other transformations from \cite{HHK} that achieves tight security reductions in the classical random oracle model. This is not something that I have gone through, since it would have required me to introduce yet another transformation from $\mathrm{OW-CPA}$ to yet another security definition before applying the $T$-transformation from \cref{sec:theFirMod} and it is not necessary in order to achieve tightness in the quantum random oracle model, which actually was achieved.
+
+Yet another next logical step for future work would be to do an implementation in software (or hardware -- or both). Doing it in hardware is not something that I dare undertake, but doing so in software would be reasonable.
+
